@@ -9,11 +9,11 @@ This repository is **public from day one** for external visibility. It is mainta
 | | |
 |---|---|
 | **Current document** | [`GUIDELINES.md`](./GUIDELINES.md) |
-| **Version** | v0.1 — pre-consultation draft (a strawman to seed the survey and first meeting) |
+| **Version** | v0.2 — pre-consultation draft (strawman + first-round feedback incorporated) |
 | **Pinned MCP revision** | [`2025-11-25`](https://modelcontextprotocol.io/specification/2025-11-25) (current stable) |
 | **Roadmap** | v0.5 working draft (M3) → v0.9 release candidate (M4) → **v1.0** published (M5) |
 
-v0.1 is deliberately opinionated so reviewers have something concrete to react to. Nothing is ratified yet. Decisions we are explicitly deferring are collected under [Open questions](./GUIDELINES.md#11-open-questions-for-the-working-group).
+v0.2 stays deliberately opinionated so reviewers have something concrete to react to, and folds in the first round of reviewer feedback (June–July 2026). Nothing is ratified yet; newly surfaced disagreements — tool granularity, and which CURIE prefix registry is authoritative — are captured as additional [Open questions](./GUIDELINES.md#11-open-questions-for-the-working-group) rather than resolved unilaterally.
 
 ## What this covers
 
