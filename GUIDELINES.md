@@ -1,9 +1,13 @@
 # EMBL-EBI Guidelines for Model Context Protocol (MCP) Servers
 
 **Version 0.3 — pre-consultation draft (MCP 2026-07-28 baseline)**
+
 **Date:** 6 September 2026
+
 **Pinned MCP specification revision:** [`2026-07-28`](https://modelcontextprotocol.io/specification/2026-07-28) (current stable)
+
 **Status:** Draft for discussion — *not yet ratified*
+
 **Language:** British English
 
 ---
