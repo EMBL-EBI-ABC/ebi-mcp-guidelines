@@ -1,6 +1,6 @@
 # EMBL-EBI MCP Guidelines
 
-Shared, EBI service-wide guidelines for building **Model Context Protocol (MCP)** servers, so that agentic access to EBI resources is consistent and interoperable in tool naming, schemas, authentication, error handling, discovery and cross-resource links.
+Shared guidelines for building **Model Context Protocol (MCP)** servers at EMBL-EBI. They help teams make their data and tools available to AI applications using consistent names, formats and security practices.
 
 This repository is **public from day one** for external visibility. It is maintained by the *Common Guidelines on MCPs* working group at EMBL-EBI.
 
@@ -10,21 +10,24 @@ This repository is **public from day one** for external visibility. It is mainta
 |---|---|
 | **Current document** | [`GUIDELINES.md`](./GUIDELINES.md) |
 | **Version** | v0.3 — pre-consultation draft (MCP 2026-07-28 baseline) |
+| **Last revised** | 6 September 2026 |
 | **Pinned MCP revision** | [`2026-07-28`](https://modelcontextprotocol.io/specification/2026-07-28) (current stable) |
 | **Roadmap** | v0.5 working draft (M3) → v0.9 release candidate (M4) → **v1.0** published (M5) |
 
-v0.3 stays deliberately opinionated so reviewers have something concrete to react to. It retains the first-round feedback incorporated in v0.2 and updates the protocol baseline to the final MCP `2026-07-28` revision. Nothing is ratified yet; disagreements — including tool granularity, the CURIE prefix registry, and registry-of-record choices — remain [Open questions](./GUIDELINES.md#11-open-questions-for-the-working-group) rather than being resolved unilaterally.
+v0.3 includes early reviewer feedback and uses MCP `2026-07-28`. The 6 September revision corrects requirement levels, clarifies migration and simplifies the language. The working group has not approved the draft yet. Choices about tool design, identifier prefixes and registries remain [open questions](./GUIDELINES.md#11-open-questions-for-the-working-group).
+
+For a first read, start with the [scope](./GUIDELINES.md#1-purpose-and-scope), [open questions](./GUIDELINES.md#11-open-questions-for-the-working-group) and [checklist](./GUIDELINES.md#12-conformance-checklist). If upgrading an older MCP implementation, read [§2.4 Migrating from an earlier revision](./GUIDELINES.md#24-migrating-from-an-earlier-revision).
 
 ## What this covers
 
-Server identity and deployment · tool naming and granularity · input and return schemas · error handling · versioning · discovery and registration (incl. the [BioContextAI Registry](https://biocontext.ai/registry)) · an authentication / authorisation / rate-limiting **security baseline** · and cross-resource identifier and vocabulary conventions.
+The guidelines cover server identity and deployment, tool names and design, input and output formats, errors, versioning, discovery and registration, security, rate limits, and identifiers shared across resources.
 
 What it does **not** cover: building or hosting servers for other teams, changing the MCP protocol upstream, or delivering a cross-resource agent product. These are out of scope or proposed follow-on work.
 
 ## How to contribute
 
 - **Comment on the draft:** open an issue, or a pull-request suggestion against `GUIDELINES.md`.
-- **Add a server to the picture:** the public catalogue of record is the [BioContextAI Registry](https://github.com/biocontext-ai/registry); the EBI-internal inventory of current/planned servers is maintained by the working group (seeded by the M1 survey).
+- **Add a server:** this draft uses the [BioContextAI Registry](https://github.com/biocontext-ai/registry) for public entries. The working group also maintains an internal inventory of current and planned servers, starting with the M1 survey responses.
 - All written outputs use **British English**.
 
 ## Project

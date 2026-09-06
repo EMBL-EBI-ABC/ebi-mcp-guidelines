@@ -1,7 +1,7 @@
 # EMBL-EBI Guidelines for Model Context Protocol (MCP) Servers
 
 **Version 0.3 — pre-consultation draft (MCP 2026-07-28 baseline)**
-**Date:** 27 August 2026
+**Date:** 6 September 2026
 **Pinned MCP specification revision:** [`2026-07-28`](https://modelcontextprotocol.io/specification/2026-07-28) (current stable)
 **Status:** Draft for discussion — *not yet ratified*
 **Language:** British English
@@ -10,11 +10,13 @@
 
 > **How to read this document**
 >
-> This is a **strawman**, circulated to seed the working-group survey and the first meeting. It is deliberately opinionated so that reviewers have something concrete to push back on. Nothing here is settled. Sections marked **[OPEN]** are decisions we are explicitly deferring to consultation, and are collected in [§11 Open questions](#11-open-questions-for-the-working-group).
+> This draft proposes shared practices for EBI MCP servers. The working group has not approved them yet. Decisions marked **[OPEN]** are collected in [§11](#11-open-questions-for-the-working-group).
 >
-> **v0.3** retains the first-round reviewer feedback incorporated in v0.2 and updates the normative baseline from MCP `2025-11-25` to the final `2026-07-28` revision. The protocol-facing guidance and checklist now reflect the stateless core, per-request versioning, `server/discover`, cacheable discovery results, the Tasks extension, authorisation hardening and the new deprecations. Working-group policy choices remain open rather than being resolved by the protocol update.
+> **v0.3** includes the early reviewer feedback and uses MCP `2026-07-28`. [§2.4](#24-migrating-from-an-earlier-revision) explains the protocol changes since `2025-11-25`. This protocol update does not settle the working group's policy decisions.
 >
-> The first *formally circulated* working draft is still **v0.5** (per the project charter, milestone M3). This pre-consultation line (v0.1 → v0.3) exists only to get us there.
+> **v0.5** will be the first formally circulated working draft, at milestone M3 in the project charter. The document version and MCP protocol revision are separate.
+>
+> For a first read, start with the scope (§1), open decisions (§11) and checklist (§12). Sections 2–10 give the implementation details. **MUST** means required for conformance, **SHOULD** means recommended, and **MAY** means optional; §2 explains these terms.
 >
 > Comments are welcome as GitHub issues or pull-request suggestions against this file.
 
@@ -31,7 +33,7 @@
 7. [Versioning and change management](#7-versioning-and-change-management)
 8. [Discovery and registration](#8-discovery-and-registration)
 9. [Authentication, authorisation and rate limiting](#9-authentication-authorisation-and-rate-limiting)
-10. [Cross-resource links and shared vocabularies](#10-cross-resource-links-and-shared-vocabularies)
+10. [Cross-resource links and shared vocabularies](#10-cross-resource-links-and-shared-vocabularies-deliverable-d4)
 11. [Open questions for the working group](#11-open-questions-for-the-working-group)
 12. [Conformance checklist](#12-conformance-checklist)
 13. [References](#13-references)
@@ -40,15 +42,15 @@
 
 ## 1. Purpose and scope
 
-EMBL-EBI service teams are increasingly asked to expose their data and tools to LLM-based agents via the Model Context Protocol (MCP). Several teams have already begun building MCP servers independently, and demand from consortia and industry partners is growing. Without shared conventions, each resource will invent its own approach to naming, schemas, authentication, error handling and discovery — fragmenting the agentic-access experience and making cross-resource workflows brittle.
+EMBL-EBI teams are building MCP servers so AI applications can use their data and tools. Shared conventions will make these servers easier to build, maintain and use together.
 
-These guidelines give EBI resource teams a common reference to apply when building their own MCP server, so that servers across EBI are consistent and interoperable. The aims are to lower the per-resource cost of MCP adoption, establish a security and governance baseline appropriate to public bioinformatics infrastructure, and position EBI as a reference site for agentic bioinformatics.
+These guidelines cover the choices teams need to make beyond the MCP specification, including tool names, data formats and security. Each resource team owns its server and roadmap.
 
-**In scope:** conventions for tool naming and granularity, return schemas, error handling, versioning, discovery, the authentication/authorisation posture, rate limiting, and cross-resource identifier and vocabulary conventions.
+**In scope:** tool names and design, input and output formats, errors, versioning, discovery, authentication, access permissions, rate limits, identifiers and shared vocabularies.
 
 **Out of scope:** building or hosting MCP servers on behalf of other teams; extending the MCP protocol upstream; delivering a cross-resource agent product; and wider AI strategy questions owned by the AI Pilots portfolio or AI Guilds.
 
-These guidelines are **recommendations for EBI resource teams**. They do not mandate changes to any resource roadmap. The one area where we propose a hard floor rather than a recommendation is the security baseline in [§9](#9-authentication-authorisation-and-rate-limiting), and even that is subject to ITS/Security review before v1.0.
+These are proposed guidelines, not a requirement to change resource roadmaps. We propose minimum security requirements in [§9](#9-authentication-authorisation-and-rate-limiting), subject to ITS/Security review before v1.0. The checklist describes what a server would need to meet to claim conformance with the guidelines.
 
 ---
 
@@ -56,11 +58,16 @@ These guidelines are **recommendations for EBI resource teams**. They do not man
 
 ### 2.1 Pinned protocol revision
 
-These guidelines are written against **MCP revision `2026-07-28`**, the current stable specification. Servers SHOULD implement this revision. Every request in this revision declares its protocol version; a server MUST reject an unsupported version with `UnsupportedProtocolVersionError` and list the versions it supports. Servers MUST implement `server/discover`, which clients MAY use to select a version before making another request. Where these guidelines and the specification disagree, **the specification wins**; please raise an issue so we can correct the guidelines.
+These guidelines use **MCP revision `2026-07-28`**, the current stable specification. Servers SHOULD implement this revision. Its protocol requirements apply whenever a server serves a request using this revision:
 
-MCP `2026-07-28` uses a stateless, per-request model and has no protocol-level negotiation handshake. A server that also needs to support `2025-11-25` or earlier clients SHOULD implement the specification's **dual-era** compatibility behaviour explicitly; a modern-only server cannot assume a legacy client will fall forward automatically.
+- Each request declares its protocol version. A server MUST reject an unsupported version with `UnsupportedProtocolVersionError` and list the versions it supports.
+- Servers MUST implement `server/discover`. Clients MAY use it to find supported versions before sending other requests.
 
-Upstream protocol changes during the project window will be **tracked, not silently absorbed**. Draft specification changes are informative only. When a later revision becomes stable, we will issue a new version of these guidelines rather than editing this version in place.
+If these guidelines disagree with the specification, **follow the specification** and raise an issue here.
+
+MCP `2026-07-28` treats each request independently. It does not use an initial handshake to agree a protocol version or establish a session. Supporting `2025-11-25` or earlier clients is optional. Servers claiming support for both approaches (**dual-era** support) MUST follow the specification's compatibility rules. Older clients cannot automatically switch to the new approach.
+
+We will track upstream changes, but draft protocol changes do not alter these requirements. Adopting a later stable MCP revision will require a new version of these guidelines.
 
 ### 2.2 Requirement levels
 
@@ -72,28 +79,30 @@ We propose three levels so teams can adopt incrementally:
 
 | Level | Meaning |
 |-------|---------|
-| **Baseline** | Every EBI MCP server MUST meet these. Primarily the security, identity and documentation requirements. |
+| **Baseline** | Required for a server to claim conformance with these guidelines. Includes applicable MCP requirements and the proposed EBI minimum requirements. |
 | **Recommended** | Strongly encouraged for interoperability and good agent behaviour. Expected for any server presented as a reference implementation. |
-| **Aspirational** | Practices we expect to promote to *Recommended* or *Baseline* in a future version. |
+| **Aspirational** | Practices we expect to recommend or require in a future version. |
 
-A self-assessment checklist is provided in [§12](#12-conformance-checklist).
+A requirement applies only where relevant: for example, HTTP headers do not apply to stdio. Optional features still have requirements when used. Use [§12](#12-conformance-checklist) to assess your server.
 
 ### 2.4 Migrating from an earlier revision
 
-Moving from `2025-11-25` to `2026-07-28` is a breaking protocol migration, not just a version-string change. A migrating implementation needs to account for these changes:
+Moving from MCP `2025-11-25` to `2026-07-28` requires changes to how clients and servers communicate. The changes below apply to the **2026 protocol path**. A dual-era implementation also retains the behaviour required by the older revisions it supports.
 
-- **Stateless requests:** remove reliance on `initialize`, `notifications/initialized`, protocol-level sessions and `Mcp-Session-Id`. Put protocol version and client capabilities in every request's `_meta`; clients SHOULD also identify themselves there, and servers SHOULD identify themselves in every result.
-- **Version selection and discovery:** implement `server/discover`; reject unsupported versions with `UnsupportedProtocolVersionError`; implement dual-era fallback only if legacy compatibility is required.
-- **Streamable HTTP:** use a single POST endpoint. The old GET stream and SSE resumability are gone. HTTP requests carry `MCP-Protocol-Version` and the routing headers `Mcp-Method` and, where applicable, `Mcp-Name`.
-- **Results and interaction:** every result has a `resultType` (`complete` or `input_required` in the core). Multi Round-Trip Requests replace server-initiated requests for elicitation and similar interactions.
-- **Caching and notifications:** list/read responses expose `ttlMs` and `cacheScope`; list output SHOULD be deterministic. Long-lived change notifications use `subscriptions/listen`.
-- **Tasks:** long-running work has moved from the experimental core into the opt-in `io.modelcontextprotocol/tasks` extension. Both client and server must advertise support.
-- **Schemas and structured content:** JSON Schema 2020-12 is the default dialect, the full keyword set is allowed, and `structuredContent` may be any JSON value that conforms to `outputSchema` when one is supplied.
-- **Authorisation:** issuer validation and issuer-bound client credentials are required where applicable. Dynamic Client Registration is deprecated in favour of Client ID Metadata Documents.
-- **Errors:** resource-not-found now uses JSON-RPC `-32602` rather than the old MCP-specific `-32002`; the range `-32020` to `-32099` is reserved for specification-defined errors.
-- **Deprecations:** new implementations SHOULD NOT adopt Roots, Sampling or MCP Logging; HTTP+SSE remains deprecated. Use explicit tool/resource parameters, direct provider integration and `stderr`/OpenTelemetry respectively.
+- **Requests:** replace `initialize`, `notifications/initialized` and protocol sessions with metadata on every request. The required `_meta` keys are `io.modelcontextprotocol/protocolVersion` and `io.modelcontextprotocol/clientCapabilities`. Clients SHOULD include `io.modelcontextprotocol/clientInfo`; servers SHOULD include `io.modelcontextprotocol/serverInfo` in each result's `_meta`.
+- **Version selection:** implement `server/discover`. Reject unsupported versions with `UnsupportedProtocolVersionError`. Follow the compatibility rules if supporting older clients too.
+- **HTTP transport:** use one POST endpoint. Responses can still contain JSON or a Server-Sent Events (SSE) stream. The GET stream, `Mcp-Session-Id` and stream resumption using `Last-Event-ID` have been removed. Requests carry `MCP-Protocol-Version`, `Mcp-Method` and, for `tools/call`, `resources/read` and `prompts/get`, `Mcp-Name`. Servers MUST check that these headers match the request body.
+- **Results and follow-up input:** every result carries `resultType`. Core values are `complete` and `input_required`. When a server needs more information, it returns `inputRequests`; the client retries the original request with `inputResponses`. This is the Multi Round-Trip Requests (MRTR) pattern, replacing separate server-initiated requests.
+- **Caching:** completed discovery/list/read results MUST carry `ttlMs` (how long the result can be considered fresh) and `cacheScope` (whether it can be shared between callers). See §8.1 for the affected methods. List output SHOULD be in a consistent order.
+- **Change notifications:** use `subscriptions/listen` instead of `resources/subscribe`, `resources/unsubscribe` or the GET stream. Progress and log messages stay on the response stream for the request they concern.
+- **Tasks:** long-running work uses the optional `io.modelcontextprotocol/tasks` extension. Clients advertise support in each request's capabilities; servers advertise it through `server/discover`. Replace `tasks/result` with polling through `tasks/get`, use `tasks/update` to supply requested input, and remove `tasks/list`.
+- **Schemas:** JSON Schema 2020-12 remains the default. Input and output schemas now allow the full keyword set. `structuredContent` can be any JSON value; when an `outputSchema` is declared, the value MUST conform to it.
+- **Authorisation:** HTTP clients must check the authorisation server's identity and keep credentials tied to the server that issued them, as detailed in §9.2. Dynamic Client Registration is deprecated in favour of Client ID Metadata Documents.
+- **Errors:** a missing resource in `resources/read` now uses JSON-RPC `-32602` instead of `-32002`. The range `-32020` to `-32099` is reserved for errors defined by MCP.
+- **Removed methods and notifications:** remove `ping`, `logging/setLevel`, `notifications/roots/list_changed`, `notifications/elicitation/complete` and the URL-elicitation `elicitationId` field. If retaining MCP Logging, clients set the log level per request through `io.modelcontextprotocol/logLevel`; servers MUST NOT send log notifications without that field. Use `requestState` if an elicitation needs an identifier across retries.
+- **Deprecated features:** Roots, Sampling and MCP Logging remain supported but new implementations SHOULD NOT adopt them. Use tool parameters or resource URIs for files, direct LLM provider APIs for model calls, and `stderr` or OpenTelemetry for logs. The older HTTP+SSE transport also remains deprecated.
 
-This section summarises the migration impact; the upstream changelog remains authoritative.
+Use the [upstream changelog](https://modelcontextprotocol.io/specification/2026-07-28/changelog) and [compatibility rules](https://modelcontextprotocol.io/specification/2026-07-28/basic/versioning) for the full migration requirements.
 
 ---
 
@@ -106,23 +115,23 @@ This section summarises the migration impact; the upstream changelog remains aut
 
 ### 3.2 Transport
 
-- Remotely hosted servers SHOULD use the **Streamable HTTP** transport defined in the pinned revision: one MCP endpoint accepting independent POST requests.
-- Local or development servers MAY use the **stdio** transport.
-- New servers MUST NOT adopt the deprecated HTTP+SSE transport or rely on behaviour removed from Streamable HTTP, including the GET stream, protocol-level sessions or SSE resumption.
-- Servers that need state across calls SHOULD mint explicit, opaque state handles and pass them as ordinary tool results/arguments. Possession of a handle is not authentication; authenticated servers MUST bind handles to the verified caller (see [§9](#9-authentication-authorisation-and-rate-limiting)).
+- Remotely hosted servers SHOULD use **Streamable HTTP**: one MCP endpoint accepting independent POST requests, with JSON or SSE responses.
+- Local or development servers MAY use **stdio**, which exchanges messages through the process's standard input and output.
+- New servers MUST NOT adopt the deprecated HTTP+SSE transport. The 2026 protocol path MUST NOT rely on the removed GET stream, protocol sessions or SSE resumption. Dual-era servers retain legacy behaviour only for the older revisions they support (§2.1).
+- Servers that need to preserve state between calls SHOULD return an opaque identifier (a **state handle**) for the client to pass back in later tool arguments. On authenticated servers, handles MUST be unguessable and bound to the verified caller. Knowing a handle is not proof of identity (see [§9](#9-authentication-authorisation-and-rate-limiting)).
 
 ### 3.3 Packaging and low-configuration setup
 
-- Servers SHOULD be installable and runnable with a single command and minimal configuration. For Python servers this means publishing to PyPI so the server runs via `uvx <package>`; a container image is RECOMMENDED for language-agnostic deployment.
+- Servers SHOULD be installable and runnable with one command and little configuration. For Python servers, publish to PyPI so users can run `uvx <package>`. A container image is RECOMMENDED for deployment in any language.
 - Servers SHOULD ship an `mcp.json`-style client configuration snippet in their README.
-- **Non-secret configuration** (endpoints, rate-limit tiers, feature switches) SHOULD be supplied via a **checked-in configuration file** rather than environment variables where practical — a file is clearer, reviewable and versionable. It MUST NOT be hard-coded in source.
-- **Secrets** (API keys, tokens, credentials) are the deliberate exception: they MUST come from the environment or a secret store and MUST NOT be committed to the repository or placed in the versioned config file (see [§9.4](#94-secrets)). Keeping the two apart is the point — the config file is meant to be readable in the open; secrets are not.
+- Non-secret configuration, such as endpoints and rate-limit settings, SHOULD be kept in a versioned configuration file where practical. It MUST NOT be hard-coded in source.
+- Secrets, such as API keys and tokens, MUST come from the environment or a secret store. They MUST NOT be committed to the repository or placed in the versioned configuration file (see [§9.4](#94-secrets)).
 
 ### 3.4 Implementation
 
-- Teams MAY use any language. For new Python servers we suggest **FastMCP**, consistent with the BioContextAI cookiecutter template, to reduce boilerplate and keep behaviour consistent across EBI.
-- In dynamically typed languages, tools SHOULD be **fully typed** so that input/output schemas are generated and validated automatically.
-- The real contract is the **conformance checklist** ([§12](#12-conformance-checklist)), not any specific library: a server in any language that meets the checklist is conformant. We recommend FastMCP for Python teams as a cheap way to get there, without mandating a stack that would exclude non-Python teams for no conformance gain.
+- Teams MAY use any language. For new Python servers, we suggest **FastMCP**, as used by the BioContextAI project template.
+- In dynamically typed languages, tools SHOULD have complete type annotations so their input and output schemas can be generated and validated automatically.
+- Check that the chosen library and version meet the protocol requirements and [§12 checklist](#12-conformance-checklist). Choosing a library does not by itself establish conformance.
 
 **[OPEN]** Do we standardise on a single reference stack (FastMCP + container) for *new* EBI servers, or remain language-agnostic? See [§11](#11-open-questions-for-the-working-group).
 
@@ -130,40 +139,38 @@ This section summarises the migration impact; the upstream changelog remains aut
 
 ## 4. Tool naming and granularity
 
-Consistent tool names are the single highest-leverage interoperability win: they let agents (and humans) discover, display and reason about tools across resources without bespoke glue.
+Consistent tool names help people and AI applications identify tools from different resources.
 
 ### 4.1 Canonical format
 
-- Tool names MUST conform to the canonical tool-name format defined by the pinned revision (SEP-986). Teams MUST verify their names against the specification rather than against this paragraph.
-- As an EBI house convention on top of the spec, we propose:
+- Tool names MUST follow the pinned specification's naming format (SEP-986). Teams MUST check their names against that specification.
+- We propose the following EBI convention:
   - **`snake_case`** identifiers;
-  - a **resource namespace prefix** so names are globally unambiguous when many EBI servers are aggregated — e.g. `ensembl_lookup_gene`, `pdbe_get_structure`, `pertcat_search_perturbations`;
+  - a resource prefix to distinguish tools when servers are combined, e.g. `ensembl_lookup_gene`, `pdbe_get_structure`, `pertcat_search_perturbations`;
   - a **`verb_object`** shape for the remainder (`get_`, `search_`, `list_`, `lookup_`, `map_`).
-- Prefixed names (`intact_*`, `disprot_*`) also survive being **copied between clients and flattened into a single tool list**, where namespacing injected by an aggregator does not — a further reason to prefer them.
-- **Cross-resource tools that join two resources have no natural single prefix.** Pending [§11.2](#11-open-questions-for-the-working-group), we suggest leaving such join tools **unprefixed** (or under a neutral prefix) and naming the resources they span in the description, so teams converge on one convention rather than each inventing their own.
+- Prefixes such as `intact_*` and `disprot_*` remain part of the tool name when tools are copied between clients or combined in one list.
+- For tools that combine resources, we suggest no prefix or a neutral prefix, with the resources named in the description. This remains open for discussion in [§11.2](#11-open-questions-for-the-working-group).
 
-**[OPEN]** The namespacing scheme (prefix vs server-level namespace vs relying on the aggregator), *including how cross-resource join tools are named*, is a working-group decision. It interacts with how a federated aggregator presents tools — see [§8](#8-discovery-and-registration) and [§11](#11-open-questions-for-the-working-group).
+**[OPEN]** Should names be distinguished by a resource prefix, by the server, or by an aggregator that combines servers? The decision also needs to cover tools that combine resources. See [§8](#8-discovery-and-registration) and [§11](#11-open-questions-for-the-working-group).
 
 ### 4.2 Granularity
 
-One point of firm agreement, and one genuine open debate surfaced by reviewers.
+Granularity means how much work each tool does. Early reviewers agreed that teams should avoid turning every REST endpoint into a separate tool. Design tools around what users need to do, and keep the set small enough for an agent to choose reliably.
 
-**Agreed:** do **not** mirror REST routes 1:1. A tool surface that simply re-exposes every upstream endpoint recreates the REST API an agent could already call, and adds little. Tools should be shaped around what an agent wants to accomplish, and a **small number of well-described tools** is easier for an agent to choose between (and cheaper in context) than a large, sprawling surface.
+Reviewers reported different results with two approaches:
 
-**Under debate — two designs, both defensible:**
+- **Task-shaped tools:** specific operations such as finding variants in a region or mapping a gene to its orthologues. Each call is easy to describe and test. An early implementation reported good results with this approach. Avoid putting unrelated operations behind one free-text `query` tool with multiple modes.
+- **A general query tool with maintained guidance:** a structured query interface, supported by instructions, examples and advice on handling failures. Another team's internal benchmarks favoured this approach over a fixed set of listing tools. It offers flexibility but needs continuing documentation and testing.
 
-- **(a) Task-shaped tools.** A handful of clear, composable operations, each wrapping roughly one upstream operation ("find variants in a region", "map a gene to its orthologues"). Easy for an agent to select; each call's shape is explicit and testable. One reviewer building an IntAct + DisProt server reports these "held up well". The failure mode to avoid at this end is a single overloaded free-text `query` tool with a mode-switch, which is hard to use reliably.
-- **(b) A generic query tool plus curated usage context.** A single expressive query interface (e.g. over a structured API or query language), shipped with carefully curated instructions, examples and failure guidance drawn from the team's own benchmarking. The argument — made from Open Targets' internal benchmarking, where a general query tool outperformed an explicit set of listing tools by a wide margin — is that a curated set of fixed tools effectively recreates fixed endpoints, whereas a well-documented generic query tool is more expressive and better aligned with how an LLM composes a request. The cost is that it takes real, ongoing curation and benchmarking to stay reliable.
+A server can offer both. The choice depends on its data model and the team's capacity to maintain the tools and guidance. These reports do not establish a default for all resources.
 
-The two are not strictly opposed: a server may offer a small set of task-shaped tools *and* a generic query escape hatch. Which to lead with is genuinely unsettled and depends on the resource's data model and how much curation the team can sustain.
-
-**[OPEN]** Task-shaped tools vs a generic query tool + curated context, as the recommended default — see [§11.9](#11-open-questions-for-the-working-group).
+**[OPEN]** Which approach should we recommend as the default, or should we recommend both? See [§11.9](#11-open-questions-for-the-working-group).
 
 ### 4.3 Descriptions, titles and annotations
 
-- Every tool MUST have a clear natural-language description stating what it does, what it returns, and any important limits (rate limits, maximum result sizes, embargo rules).
+- Every tool MUST describe what it does, what it returns and its limits, including rate limits, maximum result sizes and any embargo rules.
 - Tools SHOULD provide a human-friendly **title** and MAY provide **icons** (both supported in the pinned revision) for client display.
-- Where the pinned revision supports tool **annotations** (e.g. read-only / destructive hints), servers SHOULD set them honestly. Note that clients treat annotations from untrusted servers with caution — they aid display, they are not a security control.
+- Servers SHOULD set tool **annotations**, such as read-only or destructive hints, accurately. These help clients describe tools but do not enforce permissions.
 
 ---
 
@@ -171,25 +178,26 @@ The two are not strictly opposed: a server may offer a small set of task-shaped 
 
 ### 5.1 Inputs
 
-- Every tool MUST declare a JSON Schema for its inputs, with descriptions on each parameter. Implementations MUST support JSON Schema 2020-12, the default dialect, and SHOULD use it for new tools. They MUST NOT automatically dereference network `$ref` values and SHOULD bound schema depth, subschema count and validation time.
-- Inputs SHOULD use **identifiers**, not only free text. Where an agent might pass a gene symbol, accept the symbol *and* the canonical accession, and document which is authoritative.
-- Where a resource is keyed on accessions, servers SHOULD also **accept identifiers in CURIE form** on input (an agent will send `uniprot:P04637`) and document which namespaces they parse (see [§10.1](#101-identifiers)).
-- Inputs MUST validate against their schema; invalid input MUST produce a clear tool error (see [§6](#6-error-handling)), not a 200-with-garbage.
-- A server MAY mark non-sensitive primitive inputs with `x-mcp-header` where gateway routing or policy genuinely needs them. Secrets, tokens, credentials and personal data MUST NOT be exposed through these mirrored headers.
-- **Accepting a well-formed identifier is not the same as confirming it resolves.** LLMs fabricate plausible-looking accessions, and an accept-only tool can pass a fabrication straight to the upstream API, which then returns an empty or wrong result the agent treats as real. Servers taking accessions SHOULD add a cheap **identifier-validation gate** (RECOMMENDED): a preflight that *resolves and confirms* the identifier before any downstream call, returning a clear not-found error if it does not resolve. In one reviewer's evaluation, making this gate mandatory removed fabricated-accession failures entirely. It generalises to any accession-keyed resource and is a good candidate for a shared recipe.
+- Every tool MUST declare a JSON Schema describing its inputs, with a description for each parameter. Implementations MUST support JSON Schema 2020-12 and SHOULD use it for new tools.
+- Implementations MUST NOT automatically fetch schemas from network `$ref` addresses. They SHOULD limit schema depth, the number of subschemas and validation time to prevent excessive resource use.
+- Inputs SHOULD accept identifiers as well as free text. For example, accept both a gene symbol and its canonical accession, and document which takes precedence.
+- Servers using accessions SHOULD also accept CURIEs: identifiers with a namespace prefix, such as `uniprot:P04637`. Document the supported prefixes (see [§10.1](#101-identifiers)).
+- Inputs MUST match their schema. Invalid tool arguments MUST produce a clear tool error (see [§6](#6-error-handling)).
+- A server MAY use `x-mcp-header` to copy non-sensitive primitive inputs into HTTP headers for gateway routing or policy checks. Secrets, tokens, credentials and personal data MUST NOT appear in these headers.
+- Servers taking accessions SHOULD check that each identifier resolves before making downstream calls. Return a clear not-found error if it does not. This **identifier-validation gate** catches plausible but invented identifiers. One early evaluation reported that this check eliminated fabricated-accession failures in its tests.
 
 ### 5.2 Structured outputs
 
-- Tools SHOULD declare an `outputSchema` and return conforming **structured content** (machine-readable JSON) in `structuredContent`, in addition to a text representation for backward compatibility. Returning only a prose blob forces the agent to re-parse and is fragile.
-- Every protocol result MUST carry the pinned revision's `resultType`. This protocol discriminator (`complete`, `input_required`, or a negotiated extension value) is separate from the proposed EBI payload-level `status` below.
-- Structured results SHOULD carry a **discriminator** so *success*, *not-found* and any result variants are distinguishable without guessing (e.g. a `status` field), rather than overloading an empty list to mean several different things.
-- Return payloads SHOULD use a **consistent envelope** across a server, so an agent learns the shape once. Two cardinalities are deliberately kept apart: **per-result identifiers** (one set per row) live *inside* each result, while **per-response provenance** (one source per call) sits *once* at the envelope level — mixing them makes both harder to consume.
+- Tools SHOULD return machine-readable JSON in `structuredContent` and SHOULD declare an `outputSchema`. If a schema is declared, the server MUST provide structured results that conform to it. Tools returning structured content SHOULD also provide a text representation for older clients.
+- Every result on the 2026 protocol path MUST carry `resultType`: `complete`, `input_required`, or a supported extension value. This describes the protocol result. The proposed EBI `status` field below describes the data returned by a tool.
+- Structured results SHOULD include a field such as `status` to distinguish success, not-found and partial results. An empty list alone may be ambiguous.
+- Tools on the same server SHOULD use a consistent outer structure, or **return envelope**. Put identifiers inside each data record. Put shared source information (**provenance**) once at the response level.
 
-As a proposed EBI default:
+The following proposed envelope would go inside `structuredContent`. It is not a complete MCP response:
 
 ```jsonc
 {
-  "status": "ok",                          // discriminator: "ok" | "not_found" | "partial"
+  "status": "ok",                          // outcome: "ok" | "not_found" | "partial"
   "data": [
     {
       "identifiers": {                     // per-result: one set per row
@@ -210,56 +218,53 @@ As a proposed EBI default:
 }
 ```
 
-Which keys are **mandatory vs optional** should be stated, not left to "should usually contain", so consumers know what they can depend on. Proposed:
+Adopting this envelope is recommended and remains an open decision (§11.7). For servers that adopt it, the proposed field requirements are:
 
 | Key | Level | Notes |
 |-----|-------|-------|
-| `status` | **mandatory** | The success / not-found / partial discriminator. |
+| `status` | **mandatory** | Indicates success, not-found or a partial result. |
 | `data` | **mandatory** on success | Array of results; each result carries its own `identifiers`. |
 | `identifiers.primary` | **mandatory** per result | The primary identifier of that result. |
 | `provenance` | **mandatory** on success | Omitted on error / not-found (see below). |
 | `pagination` | mandatory for paginated tools | Include `truncated` and `returned` vs `total` (see [§5.4](#54-result-size-and-pagination)). |
 | `identifiers.xrefs` | optional | Cross-references as CURIEs. |
 
-Two refinements from early implementers:
-
-- **Do not attach provenance to errors or "not found".** Those describe the *absence* of data, not data with a source; a provenance block on `{status: "not_found"}` misleads the agent into thinking something was retrieved.
-- **Mind the context-cost** of repeating provenance and xrefs on every row. On a long list this can dominate the token budget — a further reason to keep provenance per-response, and to offer a compact projection ([§5.4](#54-result-size-and-pagination)).
+In this envelope, omit data provenance on errors and not-found results because no data was retrieved. Keep shared provenance at the response level to avoid repeating it for every record. For large responses, allow callers to request fewer fields (§5.4).
 
 ### 5.3 Identifiers, provenance and FAIR
 
-- Returns MUST carry the **primary identifier** of each result, and SHOULD carry **cross-references** as resolvable CURIEs, using a prefix from the agreed source (see [§10.1](#101-identifiers)).
-- Returns SHOULD include **provenance** on success: the source resource, its data/release version, retrieval timestamp, the **data licence**, and a **citation**. Agents and downstream users must be able to attribute and reproduce. This is the FAIR expectation EBI already holds its APIs to, carried over to MCP. (Provenance is present on success and omitted on error / not-found — see [§5.2](#52-structured-outputs).)
-- Numeric values SHOULD state their **units** explicitly — a bare number an agent cannot interpret is a common, silent source of downstream error. Prefer an explicit unit field (ideally a unit CURIE) over embedding the unit in a free-text label.
+- Each returned data record MUST carry its primary identifier and SHOULD include cross-references as resolvable CURIEs, using the agreed prefix source (see [§10.1](#101-identifiers)).
+- Successful responses SHOULD include provenance: the source resource, data version, retrieval time, data licence and citation. This is required when adopting the envelope in §5.2. Omit data provenance on errors and not-found results. Provenance helps users attribute and reproduce results, supporting FAIR data practices (Findable, Accessible, Interoperable and Reusable).
+- Numeric values SHOULD state their units. Prefer a separate unit field, ideally using a unit CURIE, to a unit embedded in a label.
 
 ### 5.4 Result size and pagination
 
-- Tools that can return large result sets MUST paginate (cursor-based RECOMMENDED) and MUST document the default and maximum page size.
-- Tools SHOULD **signal truncation explicitly** rather than leaving a caller to infer it: a `truncated` flag and explicit counts (`returned` vs `total`) let an agent tell a silent cut-off from a genuine page boundary and avoid quiet under-counts. This is the companion to pagination, not a substitute for it.
-- Tools SHOULD let the caller request a compact projection rather than always returning every field, to keep agent context manageable. This also bounds the per-row context-cost noted in [§5.2](#52-structured-outputs).
+- Tools that can return large result sets MUST split them into pages and MUST document the default and maximum page size. Cursor-based pagination is RECOMMENDED: the response includes a cursor that the client passes back to request the next page.
+- Tools SHOULD indicate when results have been cut short, using a `truncated` flag and `returned` and `total` counts. This lets callers distinguish a complete answer from a partial one.
+- Tools SHOULD let callers request only the fields they need, to reduce response size.
 
 ---
 
 ## 6. Error handling
 
-Consistent error behaviour lets an agent recover (retry, back off, ask the user, try another tool) instead of failing opaquely.
+Errors should help the caller decide whether to retry, wait, ask the user or use another tool.
 
-- Distinguish **protocol errors** (malformed request, method not found — surfaced via the JSON-RPC error channel) from **tool-execution errors** (the tool ran but could not complete — surfaced via the result's error flag, e.g. `isError`). Use the right channel for each.
-- Tool errors MUST be **structured and actionable**: a stable machine-readable code, a human-readable message, and where possible a hint at remediation ("no record for that accession; check the identifier namespace").
+- Return protocol errors, such as malformed requests or unknown methods, through the JSON-RPC error channel. Return tool-execution errors, such as a failed upstream call, in a tool result with `isError: true`.
+- Tool errors MUST include a stable machine-readable code and a clear message. Where possible, explain how to recover, for example: "No record for that accession; check the identifier namespace."
 - Errors MUST NOT leak secrets, credentials, internal stack traces, or internal host/network detail.
-- **Rate limiting** MUST be signalled explicitly (a distinct, recognisable error condition, with a retry-after indication where available) so agents back off rather than hammer the service. See [§9](#9-authentication-authorisation-and-rate-limiting).
-- Where an **upstream** resource returns its own rate-limit response (e.g. HTTP 429), the server SHOULD map it to a **retryable** tool error carrying any `retry-after` hint, distinct from a terminal error — so the agent backs off rather than treating a transitive limit as permanent failure. This is separate from the server's *own* rate limiting (see [§9.3](#93-rate-limiting-and-abuse-handling)).
-- Where a long-running operation may exceed client timeouts, servers MAY use the opt-in **Tasks extension** (`io.modelcontextprotocol/tasks`) rather than blocking. Servers MUST advertise the extension and MUST NOT return a task to a client that did not declare support.
-- Partial success SHOULD be representable (return what succeeded, flag what did not) rather than failing the whole call.
+- Rate-limit errors MUST be recognisable, with a retry-after indication where available. This lets clients wait before retrying (see [§9](#9-authentication-authorisation-and-rate-limiting)).
+- If an upstream resource returns a rate-limit error, such as HTTP 429, the server SHOULD return a retryable tool error and preserve any `retry-after` hint. Distinguish this temporary limit from a permanent failure.
+- For operations that may exceed client timeouts, servers MAY use the **Tasks extension** (`io.modelcontextprotocol/tasks`). Servers MUST advertise it through `server/discover` and MUST NOT return a task unless the client declares support in that request's capabilities. See §2.4 for migration details.
+- Responses SHOULD be able to report partial success, identifying what succeeded and what failed.
 
 ---
 
 ## 7. Versioning and change management
 
 - Servers MUST version their **software releases** with [Semantic Versioning](https://semver.org/) and maintain a changelog.
-- Servers MUST implement `server/discover` and MUST handle the pinned revision's per-request **MCP protocol version** correctly. Supporting legacy, handshake-based revisions is optional, but any claimed dual-era support MUST follow the specification's fallback rules.
-- **Breaking changes** to tool names, input schemas or return shapes MUST go through a deprecation cycle: announce, run old and new in parallel for a stated period, then remove. Removing a tool or field without notice breaks every agent built against it.
-- Servers SHOULD expose their software version and supported MCP revisions through `server/discover` metadata, so an aggregator and an agent can record what they are talking to.
+- Servers MUST implement `server/discover` and MUST handle the protocol version on each 2026 request correctly. Support for older revisions is optional. Claimed dual-era support MUST follow the specification's compatibility rules.
+- Breaking changes to tool names, input schemas or output formats MUST follow a deprecation cycle: announce the change, support old and new formats for a stated period, then remove the old format.
+- `server/discover` MUST list supported MCP revisions and SHOULD identify the server's software version. Clients can use this information to record which server they called.
 
 ---
 
@@ -267,16 +272,18 @@ Consistent error behaviour lets an agent recover (retry, back off, ask the user,
 
 ### 8.1 Server instructions and metadata
 
-- Servers MUST implement `server/discover` and SHOULD use its identity, capabilities, supported-version and cache fields accurately.
-- Servers SHOULD provide **server instructions** through `server/discover` (a short "user manual" for the LLM) describing what the resource is, when to use it, and any house rules.
-- Tool, resource and prompt metadata MUST be complete enough that a client can present and select them without out-of-band knowledge.
-- A standard **well-known Server Card** is still being developed upstream and is not part of the pinned revision. Teams MAY experiment with a `/.well-known/` discovery document, but MUST document its non-standard status and MUST NOT present it as MCP conformance.
+- Servers MUST implement `server/discover` with accurate capabilities and supported versions. They SHOULD also include their name and software version.
+- Completed results from `server/discover`, `tools/list`, `prompts/list`, `resources/list`, `resources/templates/list` and `resources/read` MUST include `ttlMs` and `cacheScope`. `ttlMs` MUST be non-negative; use `0` for an immediately stale result. `cacheScope` is `public` for results that can be shared or `private` for results restricted to the same authorisation context. Interim `input_required` results carry no caching hints. Follow the [MCP caching requirements](https://modelcontextprotocol.io/specification/2026-07-28/server/utilities/caching).
+- List results SHOULD use a consistent order so clients can cache them efficiently.
+- Servers SHOULD provide short instructions through `server/discover`: what the resource offers, when to use it and any usage rules.
+- Tool, resource and prompt metadata MUST give clients enough information to display and select them without separate documentation.
+- A standard **Server Card**, a discovery document at a well-known web address, is still being developed and is not part of this MCP revision. Teams MAY experiment with a `/.well-known/` document, but MUST label it non-standard and MUST NOT describe it as a standard MCP feature.
 
 ### 8.2 Registration in BioContextAI and the official MCP Registry (Deliverable D2)
 
-EBI MCP endpoints SHOULD be registered for automated discovery. We adopt the **[BioContextAI Registry](https://biocontext.ai/registry)** as the external registry: it is a community catalogue of biomedical MCP servers, it is Schema.org-compliant and downloadable as JSON, and it is the natural home for EBI's public servers. Registration is a pull request adding a `meta.yaml` file (the [online editor](https://biocontext.ai/registry/editor) generates it).
+EBI MCP endpoints SHOULD be registered so clients can find them. This draft uses the **[BioContextAI Registry](https://biocontext.ai/registry)**, a community catalogue of biomedical MCP servers. Its entries use Schema.org and are available as JSON. To register, submit a pull request with a `meta.yaml` file, which the [online editor](https://biocontext.ai/registry/editor) can generate.
 
-A worked EBI example, conforming to the registry [`schema.json`](https://github.com/biocontext-ai/registry/blob/main/schema.json):
+An illustrative EBI record using the registry [`schema.json`](https://github.com/biocontext-ai/registry/blob/main/schema.json) format follows. Replace example URLs and placeholders before submission:
 
 ```yaml
 "@context": https://schema.org
@@ -307,116 +314,120 @@ featureList:
 datePublished: 2026-06-18
 ```
 
-To qualify for the BioContextAI Registry a server must, in summary: have a clear **biomedical focus**; be **free for academic use**; carry an **OSI-approved open-source licence**; be **MCP-compliant**; have **public** code and documentation; and not duplicate an existing registry entry without justification. These map cleanly onto our Baseline expectations.
+BioContextAI requires a biomedical focus, free academic use, an OSI-approved open-source licence, MCP compliance, and public code and documentation. Duplicate entries need justification. These conditions inform the checklist in §12.
 
-The upstream project now also operates the **[official MCP Registry](https://modelcontextprotocol.io/registry/about)**. It is a general-purpose metadata registry, currently in preview, using a `server.json` record and verified reverse-DNS namespaces. BioContextAI adds biomedical scope and curation; the official registry adds ecosystem-wide discovery and namespace verification. Until the working group resolves [§11.6](#11-open-questions-for-the-working-group), EBI teams MAY publish to the official registry in addition to BioContextAI, but v0.3 does not make preview-registry publication a conformance requirement.
+The **[official MCP Registry](https://modelcontextprotocol.io/registry/about)** covers all subject areas and is currently in preview. It uses `server.json` records and verified names based on reversed domain names. EBI teams MAY publish there as well as in BioContextAI. Publication in the official registry is not required by v0.3; the registry policy remains open in [§11.6](#11-open-questions-for-the-working-group).
 
 ### 8.3 EBI-internal inventory (Deliverable D1)
 
-In parallel with the public registry, the project maintains an **internal living inventory** of EBI resources with current or planned MCP work — endpoints, status (live / prototype / planned), tools exposed, and adoption blockers. The survey at M1 seeds this.
+The project also maintains an internal inventory of current and planned EBI MCP work. It records endpoints, status (live, prototype or planned), available tools and blockers. The M1 survey provides the initial entries.
 
-BioContextAI registration requires a **public** repository, which gates registry entry on a visibility decision a team may not control on day one (a server may stay private until a demo). The inventory SHOULD therefore allow a **"registration-ready, pending public"** status, so a server with a schema-validated `meta.yaml` in hand is tracked as ready even before it is submitted. Building the **inventory first** is the priority: the federated-aggregator question below is most useful once there is a handful of servers to aggregate.
+Some repositories may remain private during development. The inventory SHOULD allow a **"registration-ready, pending public"** status for servers with a validated `meta.yaml` awaiting publication. Build the inventory first, so the working group knows which servers could be combined through an aggregator.
 
-**[OPEN]** Do we *also* stand up a lightweight EBI-scoped registry/aggregator (a "meta-MCP" presenting EBI servers under one endpoint), or rely solely on BioContextAI plus the internal inventory? This is the federated-aggregator question and a primary working-group decision — see [§11](#11-open-questions-for-the-working-group).
+**[OPEN]** Should EBI also provide an aggregator (a "meta-MCP") that presents several servers through one endpoint, or use BioContextAI and the internal inventory alone? See [§11](#11-open-questions-for-the-working-group).
 
 ---
 
 ## 9. Authentication, authorisation and rate limiting
 
-> This is the one section we propose as a **hard baseline** for all EBI MCP servers. It will be reviewed with **ITS / Security** before v1.0. Agentic access can bypass assumptions baked into existing web UIs, so the bar must be set explicitly.
+> These proposed minimum security requirements need **ITS/Security review before v1.0**. AI applications may call services differently from users of existing web interfaces, so teams need to check their access controls and limits.
 
 ### 9.1 Default posture
 
-- Public, read-only, already-open data MAY be exposed **without authentication**, but MUST be **rate-limited** (see §9.3).
-- Servers exposing the **Streamable HTTP** transport MUST validate the `Origin` header as required by the specification and reject a present, invalid origin with HTTP 403. As an EBI defence-in-depth baseline, deployments SHOULD also validate the `Host` header against the deployed hostnames. Locally run HTTP servers SHOULD bind only to loopback, not all network interfaces.
-- A server MUST require authentication for any tool that: **mutates state**; accesses **controlled, embargoed or personal** data; or incurs **significant compute or cost**. As a concrete trigger for that last, open-ended case: treat a tool as "costly" if it **fans out beyond a small number of upstream calls behind a single tool call**, or runs a job **longer than a few seconds** — composite / fan-out tools ([§10.4](#104-server-side-cross-resource-composites)) sit squarely in this zone. The working group should fix the exact thresholds.
+- Public, read-only data MAY be exposed without authentication, but MUST be rate-limited (see §9.3).
+- Streamable HTTP servers MUST validate the `Origin` header and reject a present, invalid origin with HTTP 403. Deployments SHOULD also check the `Host` header against their allowed hostnames. Local HTTP servers SHOULD listen only on the local machine (loopback).
+- Servers MUST require authentication for tools that change data or other state, access controlled, embargoed or personal data, or use significant computing resources or money. Proposed triggers for a "costly" tool are more than a small number of upstream calls or a job lasting more than a few seconds. Tools combining resources (§10.4) need particular attention. The working group still needs to agree the thresholds.
 
 ### 9.2 How to authenticate (per the pinned revision)
 
-- Where authentication is required, servers MUST act as **OAuth 2.1 Resource Servers** as defined by the specification.
-- Clients are required to use **Resource Indicators** ([RFC 8707](https://www.rfc-editor.org/rfc/rfc8707)) so tokens are audience-scoped to one server; servers MUST validate the audience and reject mis-scoped tokens.
-- Protected servers MUST publish OAuth Protected Resource Metadata. The associated authorisation server MUST provide OAuth Authorization Server Metadata or OpenID Connect Discovery.
-- EBI integrations SHOULD prefer **OAuth Client ID Metadata Documents** or pre-registration. Dynamic Client Registration is deprecated and SHOULD be retained only for backward compatibility where required.
-- The authorisation server SHOULD return `iss`; EBI client implementations MUST validate a returned `iss` before redeeming an authorisation code and MUST keep client credentials bound to the issuer that created them.
-- Servers MUST NOT accept or pass through tokens that were not explicitly issued for that MCP server.
-- The MCP host is responsible for obtaining **explicit user consent** before invoking tools; servers MUST NOT assume consent and MUST NOT design tools whose safe use depends on the agent hiding what it is doing from the user.
+The following OAuth requirements apply to **HTTP servers that require authentication**. Here, the MCP server checks access tokens; the authorisation server issues them.
 
-**[OPEN]** Which EBI identity provider/authorisation server do controlled-access EBI MCP servers integrate with, and is there an ELIXIR AAI liaison? To be confirmed (charter notes ELIXIR liaison may be needed at M2).
+- Protected HTTP servers MUST act as OAuth 2.1 Resource Servers, as defined by MCP.
+- Clients MUST use **Resource Indicators** ([RFC 8707](https://www.rfc-editor.org/rfc/rfc8707)) to request tokens for the intended MCP server. Servers MUST check the token's audience and reject tokens intended for another server.
+- Protected HTTP servers MUST publish OAuth Protected Resource Metadata so clients can discover how to authenticate. Their authorisation server MUST provide OAuth Authorization Server Metadata or OpenID Connect Discovery.
+- EBI integrations SHOULD prefer Client ID Metadata Documents or pre-registration. Dynamic Client Registration is deprecated and SHOULD be retained only where needed for compatibility.
+- The authorisation server SHOULD return its issuer identifier, `iss`. EBI clients MUST check a returned `iss` against the recorded issuer before exchanging an authorisation code for tokens. Clients MUST store credentials against the issuer that created them and MUST NOT reuse them with another issuer.
+- MCP servers MUST NOT accept or pass through tokens that were not explicitly issued for them.
+
+**stdio servers** SHOULD obtain credentials from the environment rather than implement the HTTP OAuth flow. A secret store can supply those environment values (§9.4). Follow the [MCP authorisation specification](https://modelcontextprotocol.io/specification/2026-07-28/basic/authorization) for transport-specific requirements.
+
+The MCP host is responsible for obtaining explicit user consent before invoking tools. Servers MUST NOT assume consent or depend on an agent concealing an action from the user.
+
+**[OPEN]** Which identity provider should controlled-access EBI servers use? Do we need a contact for ELIXIR's Authentication and Authorisation Infrastructure (AAI), as suggested in the charter for M2?
 
 ### 9.3 Rate limiting and abuse handling
 
 - Every server MUST enforce rate limits and MUST signal them as a recognisable, retryable error (see [§6](#6-error-handling)), ideally with a retry-after hint.
 - Servers SHOULD document their limits in tool descriptions and server instructions so well-behaved agents stay within them.
-- Servers SHOULD have a basic abuse-handling story (per-client throttling, ability to revoke) appropriate to a public service.
+- Servers SHOULD have a way to respond to abuse, such as limiting requests per client or revoking access.
 
 ### 9.4 Secrets
 
-- Servers MUST NOT log credentials, tokens or personal data. Configuration secrets MUST come from the environment, never the repository.
+- Servers MUST NOT log credentials, tokens or personal data. Secrets MUST come from the environment or a secret store and MUST NOT be committed to the repository or versioned configuration files.
 
 ---
 
 ## 10. Cross-resource links and shared vocabularies (Deliverable D4)
 
-The payoff of consistency is that an agent can traverse *several* EBI resources in one workflow. That requires a shared identifier scheme and shared vocabularies.
+Shared identifiers and vocabularies let an agent follow links between resources in one workflow.
 
 ### 10.1 Identifiers
 
 - Cross-references SHOULD be expressed as **Compact URIs (CURIEs)** with a registered prefix (e.g. `ensembl:ENSG00000139618`, `uniprot:P51587`, `efo:EFO_0000305`), so any consumer can resolve them.
-- **[OPEN]** *Which prefix registry is authoritative* is not yet settled. Two candidates are on the table: **[identifiers.org](https://identifiers.org/)** (an EBI resource; narrower and so less ambiguous) and the **[Bioregistry](https://bioregistry.io/)** (broader coverage; a superset in practice). Pinning one avoids two servers resolving the same prefix differently — see [§11.10](#11-open-questions-for-the-working-group).
+- **[OPEN]** Which prefix registry should we use: **[identifiers.org](https://identifiers.org/)**, an EBI resource, or the **[Bioregistry](https://bioregistry.io/)**, which covers more namespaces? Agreeing a source helps servers interpret each prefix consistently. See [§11.10](#11-open-questions-for-the-working-group).
 - Each server MUST document which identifier namespaces it accepts as input and which it returns. Servers SHOULD accept CURIE-form identifiers on input where applicable (see [§5.1](#51-inputs)).
 
 ### 10.2 Vocabularies
 
-- Where a tool returns ontology terms (diseases, tissues, assays), it SHOULD use a recognised ontology and return the term **identifier** alongside the label — for example via the **EBI Ontology Lookup Service (OLS)** and ontologies such as **EFO**. This lets agents join across resources on the term ID, not on free-text labels.
+- Tools returning terms for diseases, tissues or assays SHOULD use a recognised ontology and include each term's identifier and label. The **EBI Ontology Lookup Service (OLS)** provides access to ontologies such as the **Experimental Factor Ontology (EFO)**. Identifiers let clients match terms across resources.
 
 ### 10.3 Worked example (to be hardened into the D4 reference)
 
-A gene-centric traversal across three EBI / EBI-adjacent resources using one shared identifier:
+An illustrative workflow follows BRCA2 across three resources using shared identifiers:
 
 1. **Ensembl MCP** — `ensembl_lookup_gene(symbol="BRCA2")` → resolves to `ensembl:ENSG00000139618`, and returns an `xrefs` list including `uniprot:P51587`.
 2. **Open Targets MCP** — `opentargets_get_associations(target="ensembl:ENSG00000139618")` → disease associations keyed on the *same* Ensembl identifier; diseases returned as `efo:` CURIEs.
-3. **UniProt MCP** — `uniprot_get_entry(accession="uniprot:P51587")` → protein-level detail, reached purely by following the cross-reference, with no bespoke glue.
+3. **UniProt MCP** — `uniprot_get_entry(accession="uniprot:P51587")` → protein details, found by following the cross-reference.
 
 The **Perturbation Catalogue** and the **Ensembl GraphQL proof-of-concept** are the two candidate reference implementations named in the charter; the production D4 example will be built on these.
 
 ### 10.4 Server-side cross-resource composites
 
-The traversal in §10.3 assumes the **agent** drives the cross-resource join, one tool call per hop. That is flexible and works well for short chains, but for a hub entity with a long sequential chain it can be unreliable — early implementers report partial joins where the agent mis-orchestrates the sequence.
+In §10.3, the agent calls each resource in turn and combines the results. A server can also combine resources behind one tool call. Early implementers reported that agents sometimes missed steps in longer sequences.
 
-A complementary pattern is to compose the join **server-side**, behind a single tool call, with a **bounded** fan-out so the upstream services are not overloaded. Both are legitimate; the guidelines name both so a team makes the choice deliberately:
+- **Client-side traversal:** the agent chooses the sequence and can adapt it, but each step needs another call and may fail.
+- **Server-side composite:** one tool handles a known sequence of calls and combines the results. This can improve reliability, but the team must maintain the integration with each resource. The tool MUST limit its upstream calls and apply the authentication rules in [§9.1](#91-default-posture).
 
-- **Client-side traversal** (§10.3): flexible, and the agent can adapt the path — but it pays N agent turns and can mis-orchestrate a long chain.
-- **Server-side composite:** fast and reliable for a known join, and it hides the orchestration — but it couples two resources in one codebase and (per [§9.1](#91-default-posture)) is a "costly" fan-out tool that MUST bound its upstream calls.
-
-A cross-resource composite tool has no natural single prefix; name it per the convention in [§4.1](#41-canonical-format). A bounded server-side composite is a good candidate for a shared recipe.
+Both approaches are valid. Name tools that combine resources using the convention in [§4.1](#41-canonical-format).
 
 ---
 
 ## 11. Open questions for the working group
 
-These are the decisions we are **not** pre-empting in this pre-consultation draft. They are the backbone of the M1 survey and the first meeting.
+The working group needs to decide the following questions, informed by the M1 survey and kick-off meeting.
 
-1. **Federated aggregator.** Do we stand up an EBI-scoped "meta-MCP" that federates EBI servers under one endpoint (aligned with the BioContextAI meta-MCP pattern), or rely on BioContextAI + the internal inventory? (§8)
-2. **Tool namespacing.** Prefix convention (`ensembl_…`), server-level namespace, or delegate disambiguation to the aggregator? (§4)
-3. **Reference stack.** A single recommended stack (FastMCP + container) for new servers, or language-agnostic? (§3)
-4. **Mandatory vs recommended auth bar.** Where exactly is the hard floor, pending ITS/Security review? (§9)
-5. **Identity provider.** Which authorisation server for controlled-access EBI servers; is an ELIXIR AAI liaison needed? (§9)
-6. **Registry of record.** Is BioContextAI the sole required biomedical registry, or should EBI servers also publish to the official MCP Registry once its preview stabilises? (§8)
-7. **Return envelope.** Adopt the proposed envelope (§5.2) as a convention, or lighter-touch?
+1. **Federated aggregator.** Should EBI provide one endpoint combining its MCP servers, following the BioContextAI meta-MCP pattern, or use BioContextAI and the internal inventory alone? (§8)
+2. **Tool namespacing.** Should tool names use resource prefixes (`ensembl_…`), server-level namespaces, or names assigned by the aggregator? Include tools that combine resources in this decision. (§4)
+3. **Reference stack.** Should we recommend FastMCP and a container for new servers, or leave the language and libraries to each team? (§3)
+4. **Mandatory vs recommended auth bar.** Which security requirements should be mandatory, subject to ITS/Security review? (§9)
+5. **Identity provider.** Which authorisation server should controlled-access EBI servers use? Do we need an ELIXIR AAI contact? (§9)
+6. **Registry of record.** Should BioContextAI be the only required biomedical registry, or should EBI servers also publish in the official MCP Registry once its preview stabilises? (§8)
+7. **Return envelope.** Should we adopt the proposed response structure in §5.2, or allow more variation?
 8. **Benchmark/metric.** The charter calls for a shared performance metric across EBI APIs (D3/M2/M3) — what do we measure, and how?
-9. **Tool granularity.** Should the recommended default be **task-shaped tools**, a **generic query tool + curated usage context**, or an explicit *both* (task-shaped tools with a query escape hatch)? Raised by conflicting reviewer experience — task-shaped worked well for one team, a generic query tool out-benchmarked explicit tools for another. (§4.2)
-10. **CURIE prefix registry.** Is the authoritative prefix source **identifiers.org** (EBI; narrower, less ambiguous) or the **Bioregistry** (broader coverage)? (§10.1)
+9. **Tool granularity.** Should we recommend tools for specific tasks, a general query tool with maintained guidance, or both? Reviewers reported different results with these approaches. (§4.2)
+10. **CURIE prefix registry.** Should we use **identifiers.org** or the **Bioregistry** as the agreed source of identifier prefixes? (§10.1)
 
 ---
 
 ## 12. Conformance checklist
 
-A server team can self-assess against this. It combines the BioContextAI submission requirements with the EBI-specific items above. **B** = Baseline, **R** = Recommended, **A** = Aspirational.
+Use this checklist to assess a server against the proposed guidelines. **B** = Baseline (required), **R** = Recommended, **A** = Aspirational. Mark conditional items as not applicable where appropriate. Requirements for the 2026 protocol path do not change the behaviour needed for supported older revisions.
 
 **Identity, packaging, deployment**
 
 - [ ] (B) Stable, human-readable server name and appropriate registry identifier
-- [ ] (R) Streamable HTTP (remote, single POST endpoint) / stdio (local); no deprecated or removed transport behaviour
+- [ ] (R) Streamable HTTP for remote access; stdio permitted for local use
+- [ ] (B) No deprecated HTTP+SSE transport in new servers; no removed transport behaviour on the 2026 protocol path
 - [ ] (B) Required Streamable HTTP request metadata and routing headers validated
 - [ ] (R) One-command install (`uvx …`) and/or container image
 - [ ] (R) `mcp.json` client snippet in the README
@@ -427,16 +438,20 @@ A server team can self-assess against this. It combines the BioContextAI submiss
 - [ ] (B) Tool names conform to the spec's canonical format
 - [ ] (R) EBI namespacing + `verb_object` shape *(pending §11.2)*
 - [ ] (B) Every tool has input JSON Schema with parameter descriptions
-- [ ] (B) JSON Schema 2020-12 supported; no automatic network `$ref` dereferencing; validation resource-bounded
-- [ ] (B) Every tool has a clear description incl. limits
-- [ ] (R) Identifier-validation gate before identifier-taking tools (resolve, don't just accept)
+- [ ] (B) JSON Schema 2020-12 supported; schemas are not automatically fetched from network `$ref` addresses
+- [ ] (R) Schema depth, subschema count and validation time limited
+- [ ] (B) Tool arguments validated against the input schema, with clear errors
+- [ ] (B) Every tool has a clear description, including limits
+- [ ] (R) Identifiers checked for existence before downstream calls
 - [ ] (R) Structured (machine-readable) outputs, not prose-only
-- [ ] (R) `outputSchema` declared and `structuredContent` validated against it
-- [ ] (B) Every result carries an appropriate `resultType`
-- [ ] (R) Consistent return envelope, with a success / not-found discriminator
-- [ ] (B) Primary identifier on every result; (R) cross-refs as CURIEs
-- [ ] (R) Provenance on success (source, version, timestamp, licence, citation); omitted on error / not-found
-- [ ] (R) Pagination + documented page limits; truncation signalled explicitly (`truncated`, seen vs returned)
+- [ ] (R) `outputSchema` declared
+- [ ] (B) Where `outputSchema` is declared, structured results provided and conform to it
+- [ ] (B) Every result on the 2026 protocol path carries an appropriate `resultType`
+- [ ] (R) Consistent return envelope, with a field distinguishing success, not-found and partial results
+- [ ] (B) Primary identifier on every data record; (R) cross-references as CURIEs
+- [ ] (R) Provenance on success (source, version, time, licence, citation); required if adopting the §5.2 envelope; omitted on errors and not-found results
+- [ ] (B) Large result sets paginated, with default and maximum page sizes documented
+- [ ] (R) Truncation indicated with `truncated`, `returned` and `total`
 
 **Errors and versioning**
 
@@ -445,25 +460,28 @@ A server team can self-assess against this. It combines the BioContextAI submiss
 - [ ] (B) Rate limiting signalled as a retryable error
 - [ ] (R) Upstream 429 relayed as a retryable error with retry-after
 - [ ] (B) Semantic Versioning + changelog
-- [ ] (B) `server/discover` implemented with accurate supported versions, capabilities and identity
-- [ ] (B) Correct per-request MCP protocol-version handling and unsupported-version errors
-- [ ] (R) Dual-era fallback implemented if compatibility with handshake-based clients is claimed
-- [ ] (R) Cacheable discovery/list/read results include correct `ttlMs` and `cacheScope`; lists are deterministic
-- [ ] (R) Tasks used only through explicit extension negotiation
-- [ ] (R) Deprecation cycle for breaking changes
+- [ ] (B) `server/discover` implemented with accurate supported versions and capabilities; (R) server name and software version included
+- [ ] (B) Required version and client-capability metadata handled on each 2026 request, including unsupported-version errors
+- [ ] (B) Compatibility rules followed if support for older, handshake-based clients is claimed
+- [ ] (B) Completed discovery/list/read results listed in §8.1 include correct `ttlMs` and `cacheScope`
+- [ ] (R) List results returned in a consistent order
+- [ ] (B) If Tasks are used, the server advertises the extension and checks client support on each request
+- [ ] (B) Deprecation cycle for breaking changes
 
-**Security (Baseline — ITS/Security reviewed)**
+**Security (proposed Baseline, pending ITS/Security review)**
 
-- [ ] (B) Auth required for mutation / controlled data / costly ops
+- [ ] (B) Authentication required for changes to data or state, controlled data and costly operations
 - [ ] (B) Streamable HTTP `Origin` validation; (R) deployed `Host` allowlist; (R) local HTTP binds to loopback
-- [ ] (B) OAuth 2.1 Resource Server posture where auth applies
-- [ ] (B) Protected Resource Metadata and authorisation-server discovery where auth applies
-- [ ] (B) Audience-scoped tokens validated (RFC 8707)
-- [ ] (B) No token passthrough; client credentials issuer-bound
-- [ ] (R) Client ID Metadata Documents or pre-registration preferred over deprecated Dynamic Client Registration
-- [ ] (B) Stateful handles are unguessable and bound to the authenticated caller
+- [ ] (B) Protected HTTP servers act as OAuth 2.1 Resource Servers
+- [ ] (B) Protected HTTP servers publish Protected Resource Metadata and support authorisation-server discovery
+- [ ] (B) HTTP access tokens checked for the intended audience (RFC 8707); no token passthrough
+- [ ] (B) EBI OAuth clients validate returned `iss` values and keep credentials tied to the issuer
+- [ ] (R) HTTP integrations prefer Client ID Metadata Documents or pre-registration over deprecated Dynamic Client Registration
+- [ ] (R) stdio credentials supplied through the environment, which may be populated from a secret store
+- [ ] (B) On authenticated servers, state handles are unguessable and bound to the verified caller
 - [ ] (B) Rate limiting enforced even when unauthenticated
-- [ ] (B) No credentials/PII in logs
+- [ ] (B) No credentials, tokens or personal data in logs
+- [ ] (B) Secrets supplied through the environment or a secret store, never committed to the repository
 
 **Discovery, cross-resource, FAIR**
 
@@ -485,7 +503,11 @@ A server team can self-assess against this. It combines the BioContextAI submiss
 - **MCP specification, revision 2026-07-28** — https://modelcontextprotocol.io/specification/2026-07-28
 - **MCP 2026-07-28 changelog** — https://modelcontextprotocol.io/specification/2026-07-28/changelog
 - **MCP deprecated-features registry** — https://modelcontextprotocol.io/specification/2026-07-28/deprecated
-- **MCP versioning / revisions** — https://modelcontextprotocol.io/specification
+- **MCP versioning and compatibility** — https://modelcontextprotocol.io/specification/2026-07-28/basic/versioning
+- **MCP Streamable HTTP transport** — https://modelcontextprotocol.io/specification/2026-07-28/basic/transports/streamable-http
+- **MCP structured tool results** — https://modelcontextprotocol.io/specification/2026-07-28/server/tools
+- **MCP caching requirements** — https://modelcontextprotocol.io/specification/2026-07-28/server/utilities/caching
+- **MCP authorisation** — https://modelcontextprotocol.io/specification/2026-07-28/basic/authorization
 - **MCP Tasks extension** — https://modelcontextprotocol.io/extensions/tasks/overview
 - **Official MCP Registry** (preview) — https://modelcontextprotocol.io/registry/about
 - **MCP security best practices** — https://modelcontextprotocol.io/docs/2026-07-28/tutorials/security/security_best_practices
