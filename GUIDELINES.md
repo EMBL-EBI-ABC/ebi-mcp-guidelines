@@ -134,7 +134,7 @@ Use the [upstream changelog](https://modelcontextprotocol.io/specification/2026-
 ### 3.4 Implementation
 
 - Teams MAY use any language, framework or SDK that meets these guidelines. The working group's reference approach is **Python with FastMCP**, providing a concrete example teams can reuse without requiring other implementations to migrate.
-- The reference implementation SHOULD include a container recipe, client configuration examples and repeatable checks against these guidelines. The existing Ensembl FastMCP service was suggested as a candidate; its suitability and maintenance arrangements remain to be confirmed.
+- The reference implementation SHOULD include a container recipe, client configuration examples and repeatable checks against these guidelines. Ensembl MCP is on the roadmap and is a potential future candidate, not an existing service; its suitability and maintenance arrangements remain to be confirmed.
 - In dynamically typed languages, tools SHOULD have complete type annotations so their input and output schemas can be generated and validated automatically.
 - Check that the chosen library and version meet the protocol requirements and [§12 checklist](#12-conformance-checklist). Record the exact package and version used by the reference, and verify compatibility before presenting it as conformant. Choosing a library does not by itself establish conformance.
 
@@ -445,7 +445,7 @@ The following items track decisions informed by the M1 survey and working-group 
 
 1. **Federated aggregator.** Should EBI provide one endpoint combining its MCP servers, following the BioContextAI meta-MCP pattern, or use BioContextAI and the internal inventory alone? (§8)
 2. **Tool namespacing.** Should tool names use resource prefixes (`ensembl_…`), server-level namespaces, or names assigned by the aggregator? Include tools that combine resources in this decision. (§4)
-3. **Reference stack — direction agreed; implementation follow-up.** Use Python/FastMCP as the reference approach while allowing other languages and SDKs (§3.4). Confirm the reference's maintainer, package/version and protocol compatibility, and assess the Ensembl service suggested at the meeting. The reference should include a container recipe and shared checks.
+3. **Reference stack — direction agreed; implementation follow-up.** Use Python/FastMCP as the reference approach while allowing other languages and SDKs (§3.4). Confirm the reference's maintainer, package/version and protocol compatibility. Ensembl MCP is on the roadmap; assess its suitability as a reference when an implementation is available. The reference should include a container recipe and shared checks.
 4. **Mandatory vs recommended auth bar.** Which security requirements should be mandatory, subject to ITS/Security review? (§9)
 5. **Identity provider.** Which authorisation server should controlled-access EBI servers use? Do we need an ELIXIR AAI contact? (§9)
 6. **Registry of record.** Should BioContextAI be the only required biomedical registry, or should EBI servers also publish in the official MCP Registry once its preview stabilises? (§8)
