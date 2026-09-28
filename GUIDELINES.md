@@ -2,7 +2,7 @@
 
 **Version 0.3 — pre-consultation draft (MCP 2026-07-28 baseline)**
 
-**Date:** 6 September 2026
+**Date:** 28 September 2026
 
 **Pinned MCP specification revision:** [`2026-07-28`](https://modelcontextprotocol.io/specification/2026-07-28) (current stable)
 
@@ -14,7 +14,7 @@
 
 > **How to read this document**
 >
-> This draft proposes shared practices for EBI MCP servers. The working group has not approved them yet. Decisions marked **[OPEN]** are collected in [§11](#11-open-questions-for-the-working-group).
+> This draft proposes shared practices for EBI MCP servers. The first topic meeting agreed the direction for the reference stack and benchmarking; the changes below capture that discussion for review. The document as a whole is not yet ratified. Decisions marked **[OPEN]** and follow-up work are collected in [§11](#11-open-questions-for-the-working-group).
 >
 > **v0.3** includes the early reviewer feedback and uses MCP `2026-07-28`. [§2.4](#24-migrating-from-an-earlier-revision) explains the protocol changes since `2025-11-25`. This protocol update does not settle the working group's policy decisions.
 >
@@ -50,7 +50,7 @@ EMBL-EBI teams are building MCP servers so AI applications can use their data an
 
 These guidelines cover the choices teams need to make beyond the MCP specification, including tool names, data formats and security. Each resource team owns its server and roadmap.
 
-**In scope:** tool names and design, input and output formats, errors, versioning, discovery, authentication, access permissions, rate limits, identifiers and shared vocabularies.
+**In scope:** tool names and design, input and output formats, errors, versioning, discovery, authentication, access permissions, rate limits, identifiers and shared vocabularies, reference implementation guidance, and testing and benchmarking.
 
 **Out of scope:** building or hosting MCP servers on behalf of other teams; extending the MCP protocol upstream; delivering a cross-resource agent product; and wider AI strategy questions owned by the AI Pilots portfolio or AI Guilds.
 
@@ -133,11 +133,44 @@ Use the [upstream changelog](https://modelcontextprotocol.io/specification/2026-
 
 ### 3.4 Implementation
 
-- Teams MAY use any language. For new Python servers, we suggest **FastMCP**, as used by the BioContextAI project template.
+- Teams MAY use any language, framework or SDK that meets these guidelines. The working group's reference approach is **Python with FastMCP**, providing a concrete example teams can reuse without requiring other implementations to migrate.
+- The reference implementation SHOULD include a container recipe, client configuration examples and repeatable checks against these guidelines. The existing Ensembl FastMCP service was suggested as a candidate; its suitability and maintenance arrangements remain to be confirmed.
 - In dynamically typed languages, tools SHOULD have complete type annotations so their input and output schemas can be generated and validated automatically.
-- Check that the chosen library and version meet the protocol requirements and [§12 checklist](#12-conformance-checklist). Choosing a library does not by itself establish conformance.
+- Check that the chosen library and version meet the protocol requirements and [§12 checklist](#12-conformance-checklist). Record the exact package and version used by the reference, and verify compatibility before presenting it as conformant. Choosing a library does not by itself establish conformance.
 
-**[OPEN]** Do we standardise on a single reference stack (FastMCP + container) for *new* EBI servers, or remain language-agnostic? See [§11](#11-open-questions-for-the-working-group).
+FastMCP was preferred for its ease of use and existing team experience. Direct SDK implementations and other language stacks remain valid where they better fit a team's integration needs. Every option still requires version management, deployment configuration and compatibility testing.
+
+### 3.5 Testing and benchmarking (Deliverable D3)
+
+The working group agreed to proceed with a shared benchmarking approach that distinguishes three layers. The method below develops the meeting proposal for review; the task set, thresholds and pilot arrangements still need confirmation (§11.8).
+
+| Layer | What to check | Evidence to report |
+|-------|---------------|--------------------|
+| **Protocol** | Whether the server behaves according to the supported MCP revision and these guidelines, including discovery, schemas, tool calls and errors. | Repeatable checks with pass/fail results and the protocol and server versions tested. |
+| **Service** | How reliably and quickly fixed calls complete, and their effect on the server and upstream services. | Call outcomes, latency, upstream calls, rate-limit events and available resource-use measurements, with the workload and sample size. |
+| **Agent task** | Whether an agent completes a scientific task correctly, with sufficient coverage and supporting evidence. | Task acceptance results, completeness, elapsed time, model usage and tool-call history, with the model and client configuration. |
+
+Protocol or service checks alone do not establish scientific correctness. Agent results describe the complete tested configuration, including the model, client, tools and data.
+
+**Task cases and acceptance.** Resource teams SHOULD provide representative tasks and validate their expected outcomes. Each case SHOULD define its inputs, trusted reference results, required identifiers and evidence, completeness criteria, and time or call limits before it is run. Use a fixed data release, trusted reference query or expert-validated example as appropriate. Automate checks where possible and use domain review where scientific interpretation is needed. A task passes only when all its required checks pass: an accurately disclosed first page still fails a task requiring all matching records.
+
+**Shared reporting.** Benchmark reports SHOULD retain per-case results and report the following measures separately:
+
+| Measure | Definition |
+|---------|------------|
+| **Verified task success** | Runs passing all required acceptance checks divided by all scheduled runs, including failures and timeouts; report the counts as well as the percentage. |
+| **Completeness** | Coverage of the records or steps required by the task, including whether pagination or truncation was handled and disclosed correctly. |
+| **Time** | End-to-end task time, including retries, alongside service-call latency. Report timeouts explicitly. |
+| **Efficiency** | Model tokens, tool calls and retries, including failed attempts. If reporting tokens per successful task, divide total tokens across all attempts by successful runs; the ratio is undefined if none succeed. |
+| **Service impact** | Upstream calls, errors, rate-limit events and available server or infrastructure resource-use measurements. Mark unavailable measurements explicitly. |
+
+Reports SHOULD record the task-set version, model and client versions and settings, server and library versions, MCP revision, data release or retrieval date, prompts and available tools, timeout/retry budgets, cache conditions and repeat count. Keep these conditions consistent when comparing runs. Report results separately for each model/client configuration; the meeting proposed testing across harnesses such as Claude Desktop and Claude Code. A small pilot does not establish an organisation-wide performance threshold or a ranking of unlike resources.
+
+**Collection and tools.** Reuse existing tooling and monitoring. The meeting discussed MCP Inspector and SDK checks for protocol testing, and proposed a trial of **Karenina** for agent-task benchmarking. EMBL-EBI's recorded follow-up is to provide Karenina for that trial; compatibility with the selected servers and harnesses still needs to be checked. Other tools discussed, including Promptfoo, OpenTelemetry and k6, remain options rather than mandatory dependencies.
+
+Use the existing Kubernetes **Prometheus and Grafana** monitoring where available for service and infrastructure measurements. Collect task outcomes, model usage and the sequence of tool calls in the benchmark runner; server monitoring alone cannot supply these. Correlate runner and service records where practical and follow the logging restrictions in §9.4.
+
+The shared method supports the charter's two-resource pilot. Confirm participating resources, task reviewers, runner configuration and execution environment before running it. Local models and hosted-model access were discussed as options; the meeting did not settle a provider or hosting requirement. Agreement on the method does not mean the pilot has been completed.
 
 ---
 
@@ -408,16 +441,16 @@ Both approaches are valid. Name tools that combine resources using the conventio
 
 ## 11. Open questions for the working group
 
-The working group needs to decide the following questions, informed by the M1 survey and kick-off meeting.
+The following items track decisions informed by the M1 survey and working-group meetings. Items 3 and 8 record the direction agreed at the first topic meeting and the remaining follow-up; the other questions remain open. Original numbering is retained for the survey cross-references.
 
 1. **Federated aggregator.** Should EBI provide one endpoint combining its MCP servers, following the BioContextAI meta-MCP pattern, or use BioContextAI and the internal inventory alone? (§8)
 2. **Tool namespacing.** Should tool names use resource prefixes (`ensembl_…`), server-level namespaces, or names assigned by the aggregator? Include tools that combine resources in this decision. (§4)
-3. **Reference stack.** Should we recommend FastMCP and a container for new servers, or leave the language and libraries to each team? (§3)
+3. **Reference stack — direction agreed; implementation follow-up.** Use Python/FastMCP as the reference approach while allowing other languages and SDKs (§3.4). Confirm the reference's maintainer, package/version and protocol compatibility, and assess the Ensembl service suggested at the meeting. The reference should include a container recipe and shared checks.
 4. **Mandatory vs recommended auth bar.** Which security requirements should be mandatory, subject to ITS/Security review? (§9)
 5. **Identity provider.** Which authorisation server should controlled-access EBI servers use? Do we need an ELIXIR AAI contact? (§9)
 6. **Registry of record.** Should BioContextAI be the only required biomedical registry, or should EBI servers also publish in the official MCP Registry once its preview stabilises? (§8)
 7. **Return envelope.** Should we adopt the proposed response structure in §5.2, or allow more variation?
-8. **Benchmark/metric.** The charter calls for a shared performance metric across EBI APIs (D3/M2/M3) — what do we measure, and how?
+8. **Benchmark/metric — direction agreed; method and pilot follow-up.** Separate protocol checks, service performance and agent-task effectiveness, reusing existing monitoring and trialling Karenina (§3.5; D3/M2/M3). Review the reporting definitions in §3.5 and confirm task cases, acceptance thresholds, participating resources, reviewers and the runner/environment. EMBL-EBI is to provide Karenina for the trial. Track the two-resource pilot separately from agreement on the method.
 9. **Tool granularity.** Should we recommend tools for specific tasks, a general query tool with maintained guidance, or both? Reviewers reported different results with these approaches. (§4.2)
 10. **CURIE prefix registry.** Should we use **identifiers.org** or the **Bioregistry** as the agreed source of identifier prefixes? (§10.1)
 
@@ -436,6 +469,13 @@ Use this checklist to assess a server against the proposed guidelines. **B** = B
 - [ ] (R) One-command install (`uvx …`) and/or container image
 - [ ] (R) `mcp.json` client snippet in the README
 - [ ] (B) No hard-coded configuration or secrets
+
+**Testing and benchmarking (recommended method for review, §3.5)**
+
+- [ ] (R) Reference implementation includes a container recipe, client configuration examples and repeatable conformance checks
+- [ ] (R) Resource teams provide representative task cases with validated expected outcomes and acceptance criteria defined before execution
+- [ ] (R) Benchmark reports separate protocol, service and agent-task results, retaining per-case evidence and reporting success, completeness, time, efficiency and service impact
+- [ ] (R) Reports record versions, data context and run conditions, include failures and timeouts, and identify unavailable measurements
 
 **Tools and schemas**
 
