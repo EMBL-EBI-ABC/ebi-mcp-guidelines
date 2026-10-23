@@ -1,8 +1,8 @@
 # EMBL-EBI Guidelines for Model Context Protocol (MCP) Servers
 
-**Version 0.3 — pre-consultation draft (MCP 2026-07-28 baseline)**
+**Version 0.4 — pre-consultation draft (MCP 2026-07-28 baseline)**
 
-**Date:** 28 September 2026
+**Date:** 23 October 2026
 
 **Pinned MCP specification revision:** [`2026-07-28`](https://modelcontextprotocol.io/specification/2026-07-28) (current stable)
 
@@ -16,7 +16,7 @@
 >
 > This draft proposes shared practices for EBI MCP servers. The first topic meeting agreed the direction for the reference stack and benchmarking; the changes below capture that discussion for review. The document as a whole is not yet ratified. Decisions marked **[OPEN]** and follow-up work are collected in [§11](#11-open-questions-for-the-working-group).
 >
-> **v0.3** includes the early reviewer feedback and uses MCP `2026-07-28`. [§2.4](#24-migrating-from-an-earlier-revision) explains the protocol changes since `2025-11-25`. This protocol update does not settle the working group's policy decisions.
+> **v0.4** records the working group's agreed direction on the reference stack and benchmarking, retaining the early reviewer feedback and MCP `2026-07-28` baseline. See the [release notes](./CHANGELOG.md#v04--reference-stack-and-benchmarking). [§2.4](#24-migrating-from-an-earlier-revision) explains the protocol changes since `2025-11-25`. This protocol update does not settle the working group's policy decisions.
 >
 > **v0.5** will be the first formally circulated working draft, at milestone M3 in the project charter. The document version and MCP protocol revision are separate.
 >
@@ -353,7 +353,7 @@ datePublished: 2026-06-18
 
 BioContextAI requires a biomedical focus, free academic use, an OSI-approved open-source licence, MCP compliance, and public code and documentation. Duplicate entries need justification. These conditions inform the checklist in §12.
 
-The **[official MCP Registry](https://modelcontextprotocol.io/registry/about)** covers all subject areas and is currently in preview. It uses `server.json` records and verified names based on reversed domain names. EBI teams MAY publish there as well as in BioContextAI. Publication in the official registry is not required by v0.3; the registry policy remains open in [§11.6](#11-open-questions-for-the-working-group).
+The **[official MCP Registry](https://modelcontextprotocol.io/registry/about)** covers all subject areas and is currently in preview. It uses `server.json` records and verified names based on reversed domain names. EBI teams MAY publish there as well as in BioContextAI. Publication in the official registry is not required by v0.4; the registry policy remains open in [§11.6](#11-open-questions-for-the-working-group).
 
 ### 8.3 EBI-internal inventory (Deliverable D1)
 

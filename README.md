@@ -9,12 +9,12 @@ This repository is **public from day one** for external visibility. It is mainta
 | | |
 |---|---|
 | **Current document** | [`GUIDELINES.md`](./GUIDELINES.md) |
-| **Version** | v0.3 — pre-consultation draft (MCP 2026-07-28 baseline) |
-| **Last revised** | 28 September 2026 |
+| **Version** | v0.4 — pre-consultation draft (MCP 2026-07-28 baseline) |
+| **Last revised** | 23 October 2026 |
 | **Pinned MCP revision** | [`2026-07-28`](https://modelcontextprotocol.io/specification/2026-07-28) (current stable) |
 | **Roadmap** | v0.5 working draft (M3) → v0.9 release candidate (M4) → **v1.0** published (M5) |
 
-v0.3 includes early reviewer feedback and uses MCP `2026-07-28`. The 28 September revision records the first topic meeting's direction: a Python/FastMCP reference with freedom to use other stacks, and benchmarking across protocol, service and agent-task layers. The detailed changes are for review and the document as a whole is not yet ratified. Reference maintenance and benchmark pilot arrangements need confirmation; choices about tool design, identifier prefixes and registries remain [open questions](./GUIDELINES.md#11-open-questions-for-the-working-group).
+v0.4 records the first topic meeting's agreed direction: a Python/FastMCP reference with freedom to use other stacks, and benchmarking across protocol, service and agent-task layers. It retains early reviewer feedback and the MCP `2026-07-28` baseline. See the [release notes](./CHANGELOG.md#v04--reference-stack-and-benchmarking). The detailed changes are for review and the document as a whole is not yet ratified. Reference maintenance and benchmark pilot arrangements need confirmation; choices about tool design, identifier prefixes and registries remain [open questions](./GUIDELINES.md#11-open-questions-for-the-working-group).
 
 For a first read, start with the [scope](./GUIDELINES.md#1-purpose-and-scope), [open questions](./GUIDELINES.md#11-open-questions-for-the-working-group) and [checklist](./GUIDELINES.md#12-conformance-checklist). If upgrading an older MCP implementation, read [§2.4 Migrating from an earlier revision](./GUIDELINES.md#24-migrating-from-an-earlier-revision).
 
