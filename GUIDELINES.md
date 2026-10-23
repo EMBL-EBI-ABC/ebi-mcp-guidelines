@@ -367,11 +367,11 @@ Some repositories may remain private during development. The inventory SHOULD al
 
 ## 9. Authentication, authorisation and rate limiting
 
-> These proposed minimum security requirements need **ITS/Security review before v1.0**. AI applications may call services differently from users of existing web interfaces, so teams need to check their access controls and limits.
+> The working group supports a common minimum security baseline across MCP services, with a preference for shared security and identity infrastructure. Protections need to cover both MCP endpoints and the underlying APIs. These requirements remain subject to **ITS/Security review before v1.0**.
 
 ### 9.1 Default posture
 
-- Public, read-only data MAY be exposed without authentication, but MUST be rate-limited (see §9.3).
+- Authentication requirements SHOULD reflect the data and operation being accessed. Public, read-only operations MAY remain available without authentication where effective rate limiting and abuse controls are in place (see §9.3). Authentication does not remove the need to protect service capacity.
 - Streamable HTTP servers MUST validate the `Origin` header and reject a present, invalid origin with HTTP 403. Deployments SHOULD also check the `Host` header against their allowed hostnames. Local HTTP servers SHOULD listen only on the local machine (loopback).
 - Servers MUST require authentication for tools that change data or other state, access controlled, embargoed or personal data, or use significant computing resources or money. Proposed triggers for a "costly" tool are more than a small number of upstream calls or a job lasting more than a few seconds. Tools combining resources (§10.4) need particular attention. The working group still needs to agree the thresholds.
 
@@ -386,21 +386,34 @@ The following OAuth requirements apply to **HTTP servers that require authentica
 - The authorisation server SHOULD return its issuer identifier, `iss`. EBI clients MUST check a returned `iss` against the recorded issuer before exchanging an authorisation code for tokens. Clients MUST store credentials against the issuer that created them and MUST NOT reuse them with another issuer.
 - MCP servers MUST NOT accept or pass through tokens that were not explicitly issued for them.
 
+EBI services SHOULD prefer a supported shared identity and access management arrangement over separate systems maintained independently by each resource team. The identity provider and operational support arrangements remain to be agreed.
+
 **stdio servers** SHOULD obtain credentials from the environment rather than implement the HTTP OAuth flow. A secret store can supply those environment values (§9.4). Follow the [MCP authorisation specification](https://modelcontextprotocol.io/specification/2026-07-28/basic/authorization) for transport-specific requirements.
 
 The MCP host is responsible for obtaining explicit user consent before invoking tools. Servers MUST NOT assume consent or depend on an agent concealing an action from the user.
 
-**[OPEN]** Which identity provider should controlled-access EBI servers use? Do we need a contact for ELIXIR's Authentication and Authorisation Infrastructure (AAI), as suggested in the charter for M2?
+**[OPEN]** Which supported provider and integration route should EBI services use? Evaluate EMBL-SSO and ELIXIR's Authentication and Authorisation Infrastructure (AAI), and investigate Keycloak with the relevant operators. Confirm support for existing resource access requirements and automated workflows before making a recommendation (see §11.5).
 
 ### 9.3 Rate limiting and abuse handling
 
 - Every server MUST enforce rate limits and MUST signal them as a recognisable, retryable error (see [§6](#6-error-handling)), ideally with a retry-after hint.
+- Protection for an MCP deployment MUST cover the underlying APIs and shared service capacity, including direct API access that could bypass controls applied only at the MCP endpoint. Controls MAY be implemented through shared infrastructure, the API service, the MCP server, or a combination.
+- Teams SHOULD assess whether distributed requests can overwhelm a service while individual sources remain within their limits. Limits applied to individual IP addresses SHOULD NOT be treated as sufficient without considering this risk.
 - Servers SHOULD document their limits in tool descriptions and server instructions so well-behaved agents stay within them.
 - Servers SHOULD have a way to respond to abuse, such as limiting requests per client or revoking access.
+- Teams SHOULD coordinate these protections with ITS, particularly where effective mitigation depends on shared infrastructure.
 
 ### 9.4 Secrets
 
 - Servers MUST NOT log credentials, tokens or personal data. Secrets MUST come from the environment or a secret store and MUST NOT be committed to the repository or versioned configuration files.
+
+### 9.5 Shared security infrastructure and adoption
+
+The working group supports pursuing a shared gateway for MCP services to provide common access control, authentication and logging. Its architecture, ownership and relationship to existing API protection infrastructure remain to be agreed with ITS. Shared logging remains subject to §9.4. This security gateway does not settle the separate question of a federated aggregator that combines tools from multiple servers (§8.3 and §11.1).
+
+Teams SHOULD prefer shared security infrastructure where it can meet their requirements and SHOULD document the shared services they depend on and the responsibilities of resource teams and shared-service operators. Cloudflare is a candidate for evaluation through SITSC; no product or gateway deployment is required for conformance by this draft.
+
+Changes to authentication and access controls SHOULD be introduced gradually, with attention to existing automated pipelines and workflows. Teams SHOULD document compatibility impacts and the migration arrangements before changing access requirements.
 
 ---
 
@@ -441,13 +454,13 @@ Both approaches are valid. Name tools that combine resources using the conventio
 
 ## 11. Open questions for the working group
 
-The following items track decisions informed by the M1 survey and working-group meetings. Items 3 and 8 record the direction agreed at the first topic meeting and the remaining follow-up; the other questions remain open. Original numbering is retained for the survey cross-references.
+The following items track decisions informed by the M1 survey and working-group meetings. Items 3 and 8 record the direction agreed at the first topic meeting; items 4 and 5 record the direction agreed in the security baseline and identity provider discussion. Each retains its remaining follow-up, and the other questions remain open. Original numbering is retained for the survey cross-references.
 
 1. **Federated aggregator.** Should EBI provide one endpoint combining its MCP servers, following the BioContextAI meta-MCP pattern, or use BioContextAI and the internal inventory alone? (§8)
 2. **Tool namespacing.** Should tool names use resource prefixes (`ensembl_…`), server-level namespaces, or names assigned by the aggregator? Include tools that combine resources in this decision. (§4)
 3. **Reference stack — direction agreed; implementation follow-up.** Use Python/FastMCP as the reference approach while allowing other languages and SDKs (§3.4). Confirm the reference's maintainer, package/version and protocol compatibility. Ensembl MCP is on the roadmap; assess its suitability as a reference when an implementation is available. The reference should include a container recipe and shared checks.
-4. **Mandatory vs recommended auth bar.** Which security requirements should be mandatory, subject to ITS/Security review? (§9)
-5. **Identity provider.** Which authorisation server should controlled-access EBI servers use? Do we need an ELIXIR AAI contact? (§9)
+4. **Security baseline — direction agreed; implementation and review follow-up.** The working group supports tiered access and common minimum protections covering MCP endpoints and underlying APIs (§9). What controls, ownership and adoption arrangements should ITS/Security endorse? How should costly operations be defined, and how should distributed abuse be addressed? Assess the proposed shared gateway with ITS; the Cloudflare follow-up is to be taken to SITSC.
+5. **Shared identity and access management — direction agreed; provider decision open.** The working group prefers a shared arrangement (§9.2). Which supported provider and integration route should services use? Evaluate EMBL-SSO and ELIXIR AAI, and investigate Keycloak with the relevant operators. Confirm support for existing resource access requirements and automated workflows before making a recommendation.
 6. **Registry of record.** Should BioContextAI be the only required biomedical registry, or should EBI servers also publish in the official MCP Registry once its preview stabilises? (§8)
 7. **Return envelope.** Should we adopt the proposed response structure in §5.2, or allow more variation?
 8. **Benchmark/metric — direction agreed; method and pilot follow-up.** Separate protocol checks, service performance and agent-task effectiveness, reusing existing monitoring and trialling Karenina (§3.5; D3/M2/M3). Review the reporting definitions in §3.5 and confirm task cases, acceptance thresholds, participating resources, reviewers and the runner/environment. EMBL-EBI is to provide Karenina for the trial. Track the two-resource pilot separately from agreement on the method.
@@ -524,6 +537,10 @@ Use this checklist to assess a server against the proposed guidelines. **B** = B
 - [ ] (R) stdio credentials supplied through the environment, which may be populated from a secret store
 - [ ] (B) On authenticated servers, state handles are unguessable and bound to the verified caller
 - [ ] (B) Rate limiting enforced even when unauthenticated
+- [ ] (B) Protection covers underlying APIs and direct access paths that could bypass MCP-only controls
+- [ ] (R) Capacity protection considers distributed requests, rather than relying solely on per-IP limits
+- [ ] (R) Shared security and identity infrastructure is preferred; dependencies and responsibilities are documented
+- [ ] (R) Changes to access requirements account for existing pipelines and provide migration arrangements
 - [ ] (B) No credentials, tokens or personal data in logs
 - [ ] (B) Secrets supplied through the environment or a secret store, never committed to the repository
 
