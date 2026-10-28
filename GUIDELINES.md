@@ -371,9 +371,10 @@ Some repositories may remain private during development. The inventory SHOULD al
 
 ### 9.1 Default posture
 
-- Authentication requirements SHOULD reflect the data and operation being accessed. Public, read-only operations MAY remain available without authentication where effective rate limiting and abuse controls are in place (see §9.3). Authentication does not remove the need to protect service capacity.
+- Authentication and authorisation requirements SHOULD reflect the data and operation being accessed.
+- Services MUST authenticate the caller and verify their authorisation before executing operations that change data or other state, access controlled, embargoed, personal or otherwise sensitive data, or consume significant computing resources or incur significant financial costs. For attempts to perform these operations, including denied requests, services MUST maintain accounting records covering authorisation decisions, operation outcomes and, where relevant, resource consumption, in accordance with §9.4. Public, read-only operations outside these categories MAY remain available without authentication where effective rate limiting and abuse controls are in place (see §9.3). Authentication and authorisation do not remove the need to protect service capacity.
 - Streamable HTTP servers MUST validate the `Origin` header and reject a present, invalid origin with HTTP 403. Deployments SHOULD also check the `Host` header against their allowed hostnames. Local HTTP servers SHOULD listen only on the local machine (loopback).
-- Servers MUST require authentication for tools that change data or other state, access controlled, embargoed or personal data, or use significant computing resources or money. Proposed triggers for a "costly" tool are more than a small number of upstream calls or a job lasting more than a few seconds. Tools combining resources (§10.4) need particular attention. The working group still needs to agree the thresholds.
+- Proposed triggers for a "costly" tool are more than a small number of upstream calls or a job lasting more than a few seconds. Tools combining resources (§10.4) need particular attention. The working group still needs to agree the thresholds.
 
 ### 9.2 How to authenticate (per the pinned revision)
 
@@ -459,7 +460,7 @@ The following items track decisions informed by the M1 survey and working-group 
 1. **Federated aggregator.** Should EBI provide one endpoint combining its MCP servers, following the BioContextAI meta-MCP pattern, or use BioContextAI and the internal inventory alone? (§8)
 2. **Tool namespacing.** Should tool names use resource prefixes (`ensembl_…`), server-level namespaces, or names assigned by the aggregator? Include tools that combine resources in this decision. (§4)
 3. **Reference stack — direction agreed; implementation follow-up.** Use Python/FastMCP as the reference approach while allowing other languages and SDKs (§3.4). Confirm the reference's maintainer, package/version and protocol compatibility. Ensembl MCP is on the roadmap; assess its suitability as a reference when an implementation is available. The reference should include a container recipe and shared checks.
-4. **Security baseline — direction agreed; implementation and review follow-up.** The working group supports tiered access and common minimum protections covering MCP endpoints and underlying APIs (§9). What controls, ownership and adoption arrangements should ITS/Security endorse? How should costly operations be defined, and how should distributed abuse be addressed? Assess the proposed shared gateway with ITS; the Cloudflare follow-up is to be taken to SITSC.
+4. **Security baseline — direction agreed; implementation and review follow-up.** The working group supports tiered access and common minimum protections covering MCP endpoints and underlying APIs (§9). What controls, ownership and adoption arrangements should ITS/Security endorse? How should costly operations be defined, and how should distributed abuse be addressed? Accounting is an additional proposed baseline requirement for ITS/Security review: confirm its scope, minimum record fields (including timestamps and operation identification), permitted caller references, and access and retention rules. Clarify how records can support caller attribution while complying with §9.4's prohibition on logging personal data. Assess the proposed shared gateway with ITS; the Cloudflare follow-up is to be taken to SITSC.
 5. **Shared identity and access management — direction agreed; provider decision open.** The working group prefers a shared arrangement (§9.2). Which supported provider and integration route should services use? Evaluate EMBL-SSO and ELIXIR AAI, and investigate Keycloak with the relevant operators. Confirm support for existing resource access requirements and automated workflows before making a recommendation.
 6. **Registry of record.** Should BioContextAI be the only required biomedical registry, or should EBI servers also publish in the official MCP Registry once its preview stabilises? (§8)
 7. **Return envelope.** Should we adopt the proposed response structure in §5.2, or allow more variation?
@@ -527,7 +528,8 @@ Use this checklist to assess a server against the proposed guidelines. **B** = B
 
 **Security (proposed Baseline, pending ITS/Security review)**
 
-- [ ] (B) Authentication required for changes to data or state, controlled data and costly operations
+- [ ] (B) Caller authenticated and authorisation verified before operations that change data or state, access controlled, embargoed, personal or otherwise sensitive data, or consume significant computing resources or incur significant financial costs
+- [ ] (B) For attempts to perform these operations, including denied requests, accounting records cover authorisation decisions, operation outcomes and, where relevant, resource consumption, in accordance with §9.4
 - [ ] (B) Streamable HTTP `Origin` validation; (R) deployed `Host` allowlist; (R) local HTTP binds to loopback
 - [ ] (B) Protected HTTP servers act as OAuth 2.1 Resource Servers
 - [ ] (B) Protected HTTP servers publish Protected Resource Metadata and support authorisation-server discovery
