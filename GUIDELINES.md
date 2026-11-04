@@ -183,14 +183,15 @@ Consistent tool names help people and AI applications identify tools from differ
 - Tool names MUST follow the pinned specification's naming format (SEP-986). Teams MUST check their names against that specification.
 - We propose the following EBI convention:
   - **`snake_case`** identifiers;
-  - a resource prefix to distinguish tools when servers are combined, e.g. `ensembl_lookup_gene`, `pdbe_get_structure`, `pertcat_search_perturbations`;
   - a **`verb_object`** shape for the remainder (`get_`, `search_`, `list_`, `lookup_`, `map_`).
 - Prefixes such as `intact_*` and `disprot_*` remain part of the tool name when tools are copied between clients or combined in one list.
-- For tools that combine resources, we suggest no prefix or a neutral prefix, with the resources named in the description. This remains open for discussion in [§11.2](#11-open-questions-for-the-working-group).
 
-**[OPEN]** Should names be distinguished by a resource prefix, by the server, or by an aggregator that combines servers? The decision also needs to cover tools that combine resources. See [§8](#8-discovery-and-registration) and [§11](#11-open-questions-for-the-working-group).
+### 4.2 Namespace
 
-### 4.2 Granularity
+- Tool names SHOULD follow the pattern of **`Institute.Service.Tool`** with subsections using **`snake_case`** where needed
+- Known exceptions to this pattern are cross-institute or cross-service tools. In this case Tools MAY use follow the pattern of **`InstituteA_InstituteB.Service.Tool`** or **`Institute.ServiceA_ServiceB`**
+
+### 4.3 Granularity
 
 Granularity means how much work each tool does. Early reviewers agreed that teams should avoid turning every REST endpoint into a separate tool. Design tools around what users need to do, and keep the set small enough for an agent to choose reliably.
 
@@ -201,9 +202,11 @@ Reviewers reported different results with two approaches:
 
 A server can offer both. The choice depends on its data model and the team's capacity to maintain the tools and guidance. These reports do not establish a default for all resources.
 
-**[OPEN]** Which approach should we recommend as the default, or should we recommend both? See [§11.9](#11-open-questions-for-the-working-group).
+A **benchmark-driven** approach was largely agreed as the most sensible approach to tuning tool granularity; Starting with a wrapper for a service's existing API and then through an iterative process combine mechanical steps and separate judgment-dependent steps until changes produce dimensioning returns.
 
-### 4.3 Descriptions, titles and annotations
+A service SHOULD provide a "get_instructions" tool that can provide guidance on how to use the available tools, especially where multiple high and low level tools are available. 
+
+### 4.4 Descriptions, titles and annotations
 
 - Every tool MUST describe what it does, what it returns and its limits, including rate limits, maximum result sizes and any embargo rules.
 - Tools SHOULD provide a human-friendly **title** and MAY provide **icons** (both supported in the pinned revision) for client display.
