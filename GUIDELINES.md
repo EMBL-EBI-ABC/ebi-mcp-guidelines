@@ -189,7 +189,7 @@ Consistent tool names help people and AI applications identify tools from differ
 ### 4.2 Namespace
 
 - Tool names SHOULD follow the pattern of **`Institute.Service.Tool`** with subsections using **`snake_case`** where needed
-- Known exceptions to this pattern are cross-institute or cross-service tools. In this case Tools MAY use follow the pattern of **`InstituteA_InstituteB.Service.Tool`** or **`Institute.ServiceA_ServiceB`**
+- Known exceptions to this pattern are cross-institute or cross-service tools. In this case Tools MAY use follow the pattern of **`InstituteA_InstituteB.Service.Tool`** or **`Institute.ServiceA_ServiceB.Tool`**
 
 ### 4.3 Granularity
 
