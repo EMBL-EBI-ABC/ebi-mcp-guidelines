@@ -189,11 +189,11 @@ Consistent tool names help people and AI applications identify tools from differ
 ### 4.2 Namespace
 
 - Tool names SHOULD follow the pattern of **`Institute.Service.Tool`** with subsections using **`snake_case`** where needed
-- Known exceptions to this pattern are cross-institute or cross-service tools. In this case Tools MAY use follow the pattern of **`InstituteA_InstituteB.Service.Tool`** or **`Institute.ServiceA_ServiceB.Tool`**
+- Known exceptions to this pattern are cross-institute or cross-service tools. In this case tools MAY follow the pattern of **`InstituteA_InstituteB.Service.Tool`** or **`Institute.ServiceA_ServiceB.Tool`**
 
 ### 4.3 Granularity
 
-Granularity means how much work each tool does. Early reviewers agreed that teams should avoid turning every REST endpoint into a separate tool. Design tools around what users need to do, and keep the set small enough for an agent to choose reliably.
+Granularity means how much work each tool does. Design tools around what users need to do, and keep the set small enough for an agent to choose reliably.
 
 Reviewers reported different results with two approaches:
 
@@ -202,7 +202,7 @@ Reviewers reported different results with two approaches:
 
 A server can offer both. The choice depends on its data model and the team's capacity to maintain the tools and guidance. These reports do not establish a default for all resources.
 
-A **benchmark-driven** approach was largely agreed as the most sensible approach to tuning tool granularity; Starting with a wrapper for a service's existing API and then through an iterative process combine mechanical steps and separate judgment-dependent steps until changes produce dimensioning returns.
+A **benchmark-driven** approach was largely agreed as the most sensible approach to tuning tool granularity; Starting with a wrapper for a service's existing API and then through an iterative process combine mechanical steps and separate judgement-dependent steps until changes produces diminishing returns. 
 
 A service SHOULD provide a "get_instructions" tool that can provide guidance on how to use the available tools, especially where multiple high and low level tools are available. 
 
@@ -461,15 +461,14 @@ Both approaches are valid. Name tools that combine resources using the conventio
 The following items track decisions informed by the M1 survey and working-group meetings. Items 3 and 8 record the direction agreed at the first topic meeting; items 4 and 5 record the direction agreed in the security baseline and identity provider discussion. Each retains its remaining follow-up, and the other questions remain open. Original numbering is retained for the survey cross-references.
 
 1. **Federated aggregator.** Should EBI provide one endpoint combining its MCP servers, following the BioContextAI meta-MCP pattern, or use BioContextAI and the internal inventory alone? (§8)
-2. **Tool namespacing.** Should tool names use resource prefixes (`ensembl_…`), server-level namespaces, or names assigned by the aggregator? Include tools that combine resources in this decision. (§4)
-3. **Reference stack — direction agreed; implementation follow-up.** Use Python/FastMCP as the reference approach while allowing other languages and SDKs (§3.4). Confirm the reference's maintainer, package/version and protocol compatibility. Ensembl MCP is on the roadmap; assess its suitability as a reference when an implementation is available. The reference should include a container recipe and shared checks.
-4. **Security baseline — direction agreed; implementation and review follow-up.** The working group supports tiered access and common minimum protections covering MCP endpoints and underlying APIs (§9). What controls, ownership and adoption arrangements should ITS/Security endorse? How should costly operations be defined, and how should distributed abuse be addressed? Accounting is an additional proposed baseline requirement for ITS/Security review: confirm its scope, minimum record fields (including timestamps and operation identification), permitted caller references, and access and retention rules. Clarify how records can support caller attribution while complying with §9.4's prohibition on logging personal data. Assess the proposed shared gateway with ITS; the Cloudflare follow-up is to be taken to SITSC.
-5. **Shared identity and access management — direction agreed; provider decision open.** The working group prefers a shared arrangement (§9.2). Which supported provider and integration route should services use? Evaluate EMBL-SSO and ELIXIR AAI, and investigate Keycloak with the relevant operators. Confirm support for existing resource access requirements and automated workflows before making a recommendation.
-6. **Registry of record.** Should BioContextAI be the only required biomedical registry, or should EBI servers also publish in the official MCP Registry once its preview stabilises? (§8)
-7. **Return envelope.** Should we adopt the proposed response structure in §5.2, or allow more variation?
-8. **Benchmark/metric — direction agreed; method and pilot follow-up.** Separate protocol checks, service performance and agent-task effectiveness, reusing existing monitoring and trialling Karenina (§3.5; D3/M2/M3). Review the reporting definitions in §3.5 and confirm task cases, acceptance thresholds, participating resources, reviewers and the runner/environment. EMBL-EBI is to provide Karenina for the trial. Track the two-resource pilot separately from agreement on the method.
-9. **Tool granularity.** Should we recommend tools for specific tasks, a general query tool with maintained guidance, or both? Reviewers reported different results with these approaches. (§4.2)
-10. **CURIE prefix registry.** Should we use **identifiers.org** or the **Bioregistry** as the agreed source of identifier prefixes? (§10.1)
+2. **Reference stack — direction agreed; implementation follow-up.** Use Python/FastMCP as the reference approach while allowing other languages and SDKs (§3.4). Confirm the reference's maintainer, package/version and protocol compatibility. Ensembl MCP is on the roadmap; assess its suitability as a reference when an implementation is available. The reference should include a container recipe and shared checks.
+3. **Security baseline — direction agreed; implementation and review follow-up.** The working group supports tiered access and common minimum protections covering MCP endpoints and underlying APIs (§9). What controls, ownership and adoption arrangements should ITS/Security endorse? How should costly operations be defined, and how should distributed abuse be addressed? Accounting is an additional proposed baseline requirement for ITS/Security review: confirm its scope, minimum record fields (including timestamps and operation identification), permitted caller references, and access and retention rules. Clarify how records can support caller attribution while complying with §9.4's prohibition on logging personal data. Assess the proposed shared gateway with ITS; the Cloudflare follow-up is to be taken to SITSC.
+4. **Shared identity and access management — direction agreed; provider decision open.** The working group prefers a shared arrangement (§9.2). Which supported provider and integration route should services use? Evaluate EMBL-SSO and ELIXIR AAI, and investigate Keycloak with the relevant operators. Confirm support for existing resource access requirements and automated workflows before making a recommendation.
+5. **Registry of record.** Should BioContextAI be the only required biomedical registry, or should EBI servers also publish in the official MCP Registry once its preview stabilises? (§8)
+6. **Return envelope.** Should we adopt the proposed response structure in §5.2, or allow more variation?
+7. **Benchmark/metric — direction agreed; method and pilot follow-up.** Separate protocol checks, service performance and agent-task effectiveness, reusing existing monitoring and trialling Karenina (§3.5; D3/M2/M3). Review the reporting definitions in §3.5 and confirm task cases, acceptance thresholds, participating resources, reviewers and the runner/environment. EMBL-EBI is to provide Karenina for the trial. Track the two-resource pilot separately from agreement on the method.
+8. **Tool granularity.** Should we recommend tools for specific tasks, a general query tool with maintained guidance, or both? Reviewers reported different results with these approaches. (§4.3)
+9. **CURIE prefix registry.** Should we use **identifiers.org** or the **Bioregistry** as the agreed source of identifier prefixes? (§10.1)
 
 ---
 
