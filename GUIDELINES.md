@@ -2,7 +2,7 @@
 
 **Version 0.4 — pre-consultation draft (MCP 2026-07-28 baseline)**
 
-**Date:** 23 October 2026
+**Date:** 12 November 2026
 
 **Pinned MCP specification revision:** [`2026-07-28`](https://modelcontextprotocol.io/specification/2026-07-28) (current stable)
 
@@ -14,7 +14,7 @@
 
 > **How to read this document**
 >
-> This draft proposes shared practices for EBI MCP servers. The first topic meeting agreed the direction for the reference stack and benchmarking; the changes below capture that discussion for review. The document as a whole is not yet ratified. Decisions marked **[OPEN]** and follow-up work are collected in [§11](#11-open-questions-for-the-working-group).
+> This draft proposes shared practices for EBI MCP servers and includes the approved PR 4 conventions for return envelopes and CURIE prefixes, incorporating the changes recorded in the fourth topic meeting's summary. The document as a whole is not yet ratified. Decision statuses and existing follow-up work are collected in [§11](#11-open-questions-for-the-working-group).
 >
 > **v0.4** records the working group's agreed direction on the reference stack and benchmarking, retaining the early reviewer feedback and MCP `2026-07-28` baseline. See the [release notes](./CHANGELOG.md#v04--reference-stack-and-benchmarking). [§2.4](#24-migrating-from-an-earlier-revision) explains the protocol changes since `2025-11-25`. This protocol update does not settle the working group's policy decisions.
 >
@@ -218,7 +218,7 @@ A server can offer both. The choice depends on its data model and the team's cap
 - Every tool MUST declare a JSON Schema describing its inputs, with a description for each parameter. Implementations MUST support JSON Schema 2020-12 and SHOULD use it for new tools.
 - Implementations MUST NOT automatically fetch schemas from network `$ref` addresses. They SHOULD limit schema depth, the number of subschemas and validation time to prevent excessive resource use.
 - Inputs SHOULD accept identifiers as well as free text. For example, accept both a gene symbol and its canonical accession, and document which takes precedence.
-- Servers using accessions SHOULD also accept CURIEs: identifiers with a namespace prefix, such as `uniprot:P04637`. Document the supported prefixes (see [§10.1](#101-identifiers)).
+- Servers using accessions SHOULD also accept CURIEs: identifiers with a namespace prefix, such as `uniprot:P04637`. They SHOULD accept known, unambiguous aliases and return the documented canonical form (see [§10.1](#101-identifiers)). Document the supported prefixes and input forms.
 - Inputs MUST match their schema. Invalid tool arguments MUST produce a clear tool error (see [§6](#6-error-handling)).
 - A server MAY use `x-mcp-header` to copy non-sensitive primitive inputs into HTTP headers for gateway routing or policy checks. Secrets, tokens, credentials and personal data MUST NOT appear in these headers.
 - Servers taking accessions SHOULD check that each identifier resolves before making downstream calls. Return a clear not-found error if it does not. This **identifier-validation gate** catches plausible but invented identifiers. One early evaluation reported that this check eliminated fabricated-accession failures in its tests.
@@ -226,58 +226,67 @@ A server can offer both. The choice depends on its data model and the team's cap
 ### 5.2 Structured outputs
 
 - Tools SHOULD return machine-readable JSON in `structuredContent` and SHOULD declare an `outputSchema`. If a schema is declared, the server MUST provide structured results that conform to it. Tools returning structured content SHOULD also provide a text representation for older clients.
-- Every result on the 2026 protocol path MUST carry `resultType`: `complete`, `input_required`, or a supported extension value. This describes the protocol result. The proposed EBI `status` field below describes the data returned by a tool.
+- Every result on the 2026 protocol path MUST carry `resultType`: `complete`, `input_required`, or a supported extension value. This describes the protocol result. The EBI recipe's `status` field below describes the data returned by a tool.
 - Structured results SHOULD include a field such as `status` to distinguish success, not-found and partial results. An empty list alone may be ambiguous.
-- Tools on the same server SHOULD use a consistent outer structure, or **return envelope**. Put identifiers inside each data record. Put shared source information (**provenance**) once at the response level.
+- Tools SHOULD follow shared response conventions for outcomes, identifiers, provenance, pagination, completeness and recovery, using consistent structures within a server where they fit the output. The **return envelope** below is a recommended recipe. Tools MAY use alternative schemas for outputs such as summaries, aggregates or combined results, with the same applicable information clearly represented. Servers SHOULD document these schemas and provide examples. Declared `outputSchema` conformance remains required.
 
-The following proposed envelope would go inside `structuredContent`. It is not a complete MCP response:
+The following recipe sits inside `structuredContent`. Its `data` array contains records or result components, each with its own source information (**provenance**). These illustrative values show one page without an exact total; they are not a captured service response or a complete MCP response:
 
 ```jsonc
 {
   "status": "ok",                          // outcome: "ok" | "not_found" | "partial"
   "data": [
     {
-      "identifiers": {                     // per-result: one set per row
+      "identifiers": {                     // for an identifiable record
         "primary": "ensembl:ENSG00000139618",
         "xrefs": ["uniprot:P51587"]
       },
-      "...": "result fields"
+      "symbol": "BRCA2",
+      "provenance": {                      // attribute this record or component
+        "source": "Ensembl",
+        "source_version": "release-114",
+        "retrieved": "2026-06-18T10:00:00Z",
+        "license": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "cite": "https://www.ensembl.org/info/about/publications.html"
+      }
     }
   ],
-  "provenance": {                          // per-response: one source per call
-    "source": "Ensembl",
-    "source_version": "release-114",
-    "retrieved": "2026-06-18T10:00:00Z",
-    "license": "https://creativecommons.org/publicdomain/zero/1.0/",
-    "cite": "https://doi.org/10.1093/nar/..."
-  },
-  "pagination": { "total": 1234, "returned": 50, "truncated": true, "cursor": "..." }
+  "pagination": {
+    "returned": 1,
+    "truncated": false,                    // no results discarded; paging may continue
+    "cursor": "opaque-next-page-token"
+  }
 }
 ```
 
-Adopting this envelope is recommended and remains an open decision (§11.7). For servers that adopt it, the proposed field requirements are:
+For tools that adopt this recipe, the field requirements are:
 
 | Key | Level | Notes |
 |-----|-------|-------|
 | `status` | **mandatory** | Indicates success, not-found or a partial result. |
-| `data` | **mandatory** on success | Array of results; each result carries its own `identifiers`. |
-| `identifiers.primary` | **mandatory** per result | The primary identifier of that result. |
-| `provenance` | **mandatory** on success | Omitted on error / not-found (see below). |
-| `pagination` | mandatory for paginated tools | Include `truncated` and `returned` vs `total` (see [§5.4](#54-result-size-and-pagination)). |
-| `identifiers.xrefs` | optional | Cross-references as CURIEs. |
+| `data` | **mandatory** on success | Array of records or result components. A successful search with no matches has an empty array. A summary or aggregate can be a component without a primary ID. |
+| `data[].identifiers.primary` | **mandatory where applicable** | Primary ID for an identifiable record, or a service-assigned analysis result ID; see §5.3. |
+| `data[].provenance` | **mandatory** for returned data | Attributes each record or component, including usable data in a partial result. Include source, version, retrieval time, licence and citation where available. |
+| `pagination` | mandatory for paginated tools | Include `returned`, a continuation cursor when available, and an indication of truncation. An exact `total` is optional (see [§5.4](#54-result-size-and-pagination)). |
+| `data[].identifiers.xrefs` | optional | Cross-references as CURIEs. |
 
-In this envelope, omit data provenance on errors and not-found results because no data was retrieved. Keep shared provenance at the response level to avoid repeating it for every record. For large responses, allow callers to request fewer fields (§5.4).
+Place provenance inside `data` alongside the record or component it describes. A component may group records that share provenance, provided their attribution remains clear. Combined results SHOULD distinguish contributing sources and their relevant versions, licences and citations. Source resources remain responsible for the detail of their provenance model.
+
+Empty results SHOULD retain useful source and query context: what was searched, the version where known and the outcome. Failures SHOULD identify what was attempted and what failed, recording versions only where known. Distinguish that context from provenance for returned data, and identify failed sources separately (§6). Servers SHOULD document where this context appears in their schema. For large responses, allow callers to request fewer fields (§5.4).
 
 ### 5.3 Identifiers, provenance and FAIR
 
-- Each returned data record MUST carry its primary identifier and SHOULD include cross-references as resolvable CURIEs, using the agreed prefix source (see [§10.1](#101-identifiers)).
-- Successful responses SHOULD include provenance: the source resource, data version, retrieval time, data licence and citation. This is required when adopting the envelope in §5.2. Omit data provenance on errors and not-found results. Provenance helps users attribute and reproduce results, supporting FAIR data practices (Findable, Accessible, Interoperable and Reusable).
+- Returned records MUST carry their primary identifier where one is appropriate to the record. Summaries and aggregates MAY omit a primary identifier; do not manufacture one for them. Analysis results MUST include their result identifier when the service assigns one, regardless of how long those results are retained.
+- Summaries and aggregates SHOULD include the query, relevant parameters, contributing sources and enough completeness information to interpret the result.
+- Records SHOULD include cross-references as resolvable CURIEs, using the prefix policy in [§10.1](#101-identifiers).
+- Successful responses SHOULD include provenance: the source resource, data version, retrieval time, data licence and citation, where available. Provenance for returned data is required when adopting the recipe in §5.2, including for usable components of a partial result. Associate it with the relevant data component; empty or failed operations SHOULD retain source and query context as described in §5.2. Provenance helps users attribute and reproduce results, supporting FAIR data practices (Findable, Accessible, Interoperable and Reusable).
 - Numeric values SHOULD state their units. Prefer a separate unit field, ideally using a unit CURIE, to a unit embedded in a label.
 
 ### 5.4 Result size and pagination
 
 - Tools that can return large result sets MUST split them into pages and MUST document the default and maximum page size. Cursor-based pagination is RECOMMENDED: the response includes a cursor that the client passes back to request the next page.
-- Tools SHOULD indicate when results have been cut short, using a `truncated` flag and `returned` and `total` counts. This lets callers distinguish a complete answer from a partial one.
+- Paginated tools SHOULD report the number of records returned and how to continue. An exact `total` MAY be omitted when it is unavailable or costly to compute; clients can continue using the cursor. Servers SHOULD document what the cursor establishes about further matches and how callers recognise the end. A cursor may permit another request without guaranteeing that it will return more matches.
+- Tools SHOULD indicate when results have been cut short, for example with a `truncated` flag. Distinguish ordinary pagination from results discarded because of a limit or work left incomplete by a failure. In the §5.2 recipe, `truncated: false` on a page means no results were discarded; it does not by itself establish that the full result set has been retrieved. A successful page can use `status: "ok"` while continuation remains available.
 - Tools SHOULD let callers request only the fields they need, to reduce response size.
 
 ---
@@ -287,12 +296,14 @@ In this envelope, omit data provenance on errors and not-found results because n
 Errors should help the caller decide whether to retry, wait, ask the user or use another tool.
 
 - Return protocol errors, such as malformed requests or unknown methods, through the JSON-RPC error channel. Return tool-execution errors, such as a failed upstream call, in a tool result with `isError: true`.
+- A successful search with no matches is an empty result, rather than a tool-execution failure. For a lookup of a requested record that is absent, return the clear not-found tool error described in §5.1; when using the recipe, `status: "not_found"` describes that outcome.
+- The data outcome and the MCP tool-error indication SHOULD agree. Tools SHOULD document their handling of missing records and partial failures, so callers can distinguish usable data, failed work and the appropriate recovery action.
 - Tool errors MUST include a stable machine-readable code and a clear message. Where possible, explain how to recover, for example: "No record for that accession; check the identifier namespace."
 - Errors MUST NOT leak secrets, credentials, internal stack traces, or internal host/network detail.
 - Rate-limit errors MUST be recognisable, with a retry-after indication where available. This lets clients wait before retrying (see [§9](#9-authentication-authorisation-and-rate-limiting)).
 - If an upstream resource returns a rate-limit error, such as HTTP 429, the server SHOULD return a retryable tool error and preserve any `retry-after` hint. Distinguish this temporary limit from a permanent failure.
 - For operations that may exceed client timeouts, servers MAY use the **Tasks extension** (`io.modelcontextprotocol/tasks`). Servers MUST advertise it through `server/discover` and MUST NOT return a task unless the client declares support in that request's capabilities. See §2.4 for migration details.
-- Responses SHOULD be able to report partial success, identifying what succeeded and what failed.
+- Responses SHOULD be able to report partial success, identifying what succeeded and what failed. Keep provenance with the usable data and identify failed or unchecked sources separately. A source that could not be checked supplies no evidence for a scientific conclusion.
 
 ---
 
@@ -425,8 +436,11 @@ Shared identifiers and vocabularies let an agent follow links between resources 
 ### 10.1 Identifiers
 
 - Cross-references SHOULD be expressed as **Compact URIs (CURIEs)** with a registered prefix (e.g. `ensembl:ENSG00000139618`, `uniprot:P51587`, `efo:EFO_0000305`), so any consumer can resolve them.
-- **[OPEN]** Which prefix registry should we use: **[identifiers.org](https://identifiers.org/)**, an EBI resource, or the **[Bioregistry](https://bioregistry.io/)**, which covers more namespaces? Agreeing a source helps servers interpret each prefix consistently. See [§11.10](#11-open-questions-for-the-working-group).
+- Servers SHOULD use **[Identifiers.org](https://identifiers.org/)** as the preferred source of namespace prefixes and accession conventions. Where it has a coverage gap, they SHOULD consult the **[Bioregistry](https://bioregistry.io/)** as the secondary source. Exceptions, including Bioregistry fallbacks and any further exceptions, MUST be documented with the namespace meaning, chosen prefix and accession form, source, resolution route and reason for the exception.
+- Teams SHOULD feed gaps found in Identifiers.org back to its maintainers, for example through its [prefix request route](https://registry.identifiers.org/prefixregistrationrequest), so the shared reference can be updated.
 - Each server MUST document which identifier namespaces it accepts as input and which it returns. Servers SHOULD accept CURIE-form identifiers on input where applicable (see [§5.1](#51-inputs)).
+- Servers SHOULD return the documented canonical forms and accept known, unambiguous aliases where practical, preserving each namespace's accession rules, including case and embedded prefixes. Normalising an alias SHOULD preserve the matching records available under the canonical form. A free-text search may match several records; canonical output does not imply filtering those matches to a single record.
+- Servers SHOULD document their canonical forms and alias mappings, resolve conflicting mappings explicitly, and handle ambiguous or unsupported prefixes with a clear response and a supported form where known. Avoid guessing a namespace from an accession alone or choosing a mapping according to which registry responds first. Namespace recognition, identifier syntax and record existence are separate checks. Mappings MAY be maintained locally; a live registry lookup is not required for every tool call.
 
 ### 10.2 Vocabularies
 
@@ -455,7 +469,7 @@ Both approaches are valid. Name tools that combine resources using the conventio
 
 ## 11. Open questions for the working group
 
-The following items track decisions informed by the M1 survey and working-group meetings. Items 3 and 8 record the direction agreed at the first topic meeting; items 4 and 5 record the direction agreed in the security baseline and identity provider discussion. Each retains its remaining follow-up, and the other questions remain open. Original numbering is retained for the survey cross-references.
+The following items track decisions informed by the M1 survey and working-group meetings. Items 3 and 8 record the direction agreed at the first topic meeting; items 4 and 5 record the security baseline and identity provider discussion; items 7 and 10 record the approved PR 4 conventions, incorporating the fourth topic meeting's summary. The document as a whole remains a draft. Original numbering is retained for the survey cross-references.
 
 1. **Federated aggregator.** Should EBI provide one endpoint combining its MCP servers, following the BioContextAI meta-MCP pattern, or use BioContextAI and the internal inventory alone? (§8)
 2. **Tool namespacing.** Should tool names use resource prefixes (`ensembl_…`), server-level namespaces, or names assigned by the aggregator? Include tools that combine resources in this decision. (§4)
@@ -463,10 +477,10 @@ The following items track decisions informed by the M1 survey and working-group 
 4. **Security baseline — direction agreed; implementation and review follow-up.** The working group supports tiered access and common minimum protections covering MCP endpoints and underlying APIs (§9). What controls, ownership and adoption arrangements should ITS/Security endorse? How should costly operations be defined, and how should distributed abuse be addressed? Accounting is an additional proposed baseline requirement for ITS/Security review: confirm its scope, minimum record fields (including timestamps and operation identification), permitted caller references, and access and retention rules. Clarify how records can support caller attribution while complying with §9.4's prohibition on logging personal data. Assess the proposed shared gateway with ITS; the Cloudflare follow-up is to be taken to SITSC.
 5. **Shared identity and access management — direction agreed; provider decision open.** The working group prefers a shared arrangement (§9.2). Which supported provider and integration route should services use? Evaluate EMBL-SSO and ELIXIR AAI, and investigate Keycloak with the relevant operators. Confirm support for existing resource access requirements and automated workflows before making a recommendation.
 6. **Registry of record.** Should BioContextAI be the only required biomedical registry, or should EBI servers also publish in the official MCP Registry once its preview stabilises? (§8)
-7. **Return envelope.** Should we adopt the proposed response structure in §5.2, or allow more variation?
+7. **Return envelope — PR 4 convention approved.** Use shared response conventions with a recommended recipe and documented alternative schemas (§5.2). Attribute data per component, retain useful context for empty results, apply identifiers where appropriate and permit pagination without an exact total (§§5.3–5.4).
 8. **Benchmark/metric — direction agreed; method and pilot follow-up.** Separate protocol checks, service performance and agent-task effectiveness, reusing existing monitoring and trialling Karenina (§3.5; D3/M2/M3). Review the reporting definitions in §3.5 and confirm task cases, acceptance thresholds, participating resources, reviewers and the runner/environment. EMBL-EBI is to provide Karenina for the trial. Track the two-resource pilot separately from agreement on the method.
 9. **Tool granularity.** Should we recommend tools for specific tasks, a general query tool with maintained guidance, or both? Reviewers reported different results with these approaches. (§4.2)
-10. **CURIE prefix registry.** Should we use **identifiers.org** or the **Bioregistry** as the agreed source of identifier prefixes? (§10.1)
+10. **CURIE prefix registry — PR 4 convention approved.** Prefer **Identifiers.org**, consult the **Bioregistry** for gaps, document fallback mappings and further exceptions, and feed gaps back to Identifiers.org. Return canonical forms and accept unambiguous aliases (§10.1).
 
 ---
 
@@ -505,15 +519,21 @@ Use this checklist to assess a server against the proposed guidelines. **B** = B
 - [ ] (R) `outputSchema` declared
 - [ ] (B) Where `outputSchema` is declared, structured results provided and conform to it
 - [ ] (B) Every result on the 2026 protocol path carries an appropriate `resultType`
-- [ ] (R) Consistent return envelope, with a field distinguishing success, not-found and partial results
-- [ ] (B) Primary identifier on every data record; (R) cross-references as CURIEs
-- [ ] (R) Provenance on success (source, version, time, licence, citation); required if adopting the §5.2 envelope; omitted on errors and not-found results
+- [ ] (R) Shared response conventions, with a recommended recipe or documented alternative schema and clear outcomes
+- [ ] (B, where applicable) Primary IDs for identifiable records and service-assigned analysis results; summaries and aggregates may omit them
+- [ ] (R) Summaries and aggregates include query, parameters, sources and relevant completeness information
+- [ ] (R) Cross-references as CURIEs
+- [ ] (R) Provenance associated with each returned data component (source, version, time, licence, citation where available); required for returned data if adopting the §5.2 recipe
+- [ ] (R) Empty results retain source/query context and known versions; failures identify attempted and failed work
 - [ ] (B) Large result sets paginated, with default and maximum page sizes documented
-- [ ] (R) Truncation indicated with `truncated`, `returned` and `total`
+- [ ] (R) Returned count and continuation documented, including cursor and end-of-results semantics; exact total optional
+- [ ] (R) Truncation and failed work distinguished from ordinary pagination
 
 **Errors and versioning**
 
 - [ ] (B) Protocol vs tool errors on the correct channel
+- [ ] (R) Empty searches distinguished from failed work; partial results identify usable data and failed or unchecked sources
+- [ ] (R) Data outcomes, tool-error indications and recovery actions agree, with missing-record and partial-failure handling documented
 - [ ] (B) Structured, actionable, secret-free error payloads
 - [ ] (B) Rate limiting signalled as a retryable error
 - [ ] (R) Upstream 429 relayed as a retryable error with retry-after
@@ -553,6 +573,10 @@ Use this checklist to assess a server against the proposed guidelines. **B** = B
 - [ ] (R) Registered in BioContextAI with valid `meta.yaml`
 - [ ] (A) Published to the official MCP Registry while it remains in preview
 - [ ] (B) Documented accepted/returned identifier namespaces
+- [ ] (R) Identifiers.org preferred, Bioregistry consulted for gaps, and canonical output forms and accepted aliases documented
+- [ ] (B) Bioregistry fallbacks and further prefix exceptions documented with namespace meaning, prefix and accession form, source, resolution route and reason
+- [ ] (R) Conflicting mappings resolved explicitly; unsupported or ambiguous prefixes receive a clear response and a supported form where known
+- [ ] (R) Gaps reported back to Identifiers.org
 - [ ] (R) Ontology terms returned with IDs (OLS/EFO etc.)
 - [ ] (B) OSI-approved open-source licence
 - [ ] (B) Public repository and documentation
