@@ -10,7 +10,7 @@ This repository is **public from day one** for external visibility. It is mainta
 |---|---|
 | **Current document** | [`GUIDELINES.md`](./GUIDELINES.md) |
 | **Version** | v0.4 — pre-consultation draft (MCP 2026-07-28 baseline) |
-| **Last revised** | 12 November 2026 |
+| **Last revised** | 26 November 2026 |
 | **Pinned MCP revision** | [`2026-07-28`](https://modelcontextprotocol.io/specification/2026-07-28) (current stable) |
 | **Roadmap** | v0.5 working draft (M3) → v0.9 release candidate (M4) → **v1.0** published (M5) |
 
