@@ -2,7 +2,7 @@
 
 **Version 0.4 — pre-consultation draft (MCP 2026-07-28 baseline)**
 
-**Date:** 12 November 2026
+**Date:** 26 November 2026
 
 **Pinned MCP specification revision:** [`2026-07-28`](https://modelcontextprotocol.io/specification/2026-07-28) (current stable)
 
@@ -270,7 +270,7 @@ For tools that adopt this recipe, the field requirements are:
 | `data` | **mandatory** on success | Array of records or result components. A successful search with no matches has an empty array. A summary or aggregate can be a component without a primary ID. |
 | `data[].identifiers.primary` | **mandatory where applicable** | Primary ID for an identifiable record, or a service-assigned analysis result ID; see §5.3. |
 | `data[].provenance` | **mandatory** for returned data | Attributes each record or component, including usable data in a partial result. Include source, version, retrieval time, licence and citation where available. |
-| `pagination` | mandatory for paginated tools | Include `returned`, a continuation cursor when available, and an indication of truncation. An exact `total` is optional (see [§5.4](#54-result-size-and-pagination)). |
+| `pagination` | **mandatory** for paginated tools | Include `returned`, a continuation cursor when available, and an indication of truncation. An exact `total` is optional. Tools without pagination may omit this field (see [§5.4](#54-result-size-and-pagination)). |
 | `data[].identifiers.xrefs` | optional | Cross-references as CURIEs. |
 
 Place provenance inside `data` alongside the record or component it describes. A component may group records that share provenance, provided their attribution remains clear. Combined results SHOULD distinguish contributing sources and their relevant versions, licences and citations. Source resources remain responsible for the detail of their provenance model.
@@ -287,7 +287,8 @@ Empty results SHOULD retain useful source and query context: what was searched, 
 
 ### 5.4 Result size and pagination
 
-- Tools that can return large result sets MUST split them into pages and MUST document the default and maximum page size. Cursor-based pagination is RECOMMENDED: the response includes a cursor that the client passes back to request the next page.
+- Implementers SHOULD assess the largest result sets a tool can return across its supported inputs, considering both record count and payload size. Tools whose results are always small MAY return them in a single response. Tools that can return large result sets MUST paginate them and MUST document the default and maximum page sizes.
+- Cursor-based pagination is RECOMMENDED. The response includes a cursor that the client passes back to request the next page.
 - Paginated tools SHOULD report the number of records returned and how to continue. An exact `total` MAY be omitted when it is unavailable or costly to compute; clients can continue using the cursor. Servers SHOULD document what the cursor establishes about further matches and how callers recognise the end. A cursor may permit another request without guaranteeing that it will return more matches.
 - Tools SHOULD indicate when results have been cut short, for example with a `truncated` flag. Distinguish ordinary pagination from results discarded because of a limit or work left incomplete by a failure. In the §5.2 recipe, `truncated: false` on a page means no results were discarded; it does not by itself establish that the full result set has been retrieved. A successful page can use `status: "ok"` while continuation remains available.
 - Tools SHOULD let callers request only the fields they need, to reduce response size.
@@ -528,7 +529,7 @@ Use this checklist to assess a server against the proposed guidelines. **B** = B
 - [ ] (R) Cross-references as CURIEs
 - [ ] (R) Provenance associated with each returned data component (source, version, time, licence, citation where available); required for returned data if adopting the §5.2 recipe
 - [ ] (R) Empty results retain source/query context and known versions; failures identify attempted and failed work
-- [ ] (B) Large result sets paginated, with default and maximum page sizes documented
+- [ ] (B) Tools that can return large result sets paginate them and document default and maximum page sizes ([§5.4](#54-result-size-and-pagination))
 - [ ] (R) Returned count and continuation documented, including cursor and end-of-results semantics; exact total optional
 - [ ] (R) Truncation and failed work distinguished from ordinary pagination
 
