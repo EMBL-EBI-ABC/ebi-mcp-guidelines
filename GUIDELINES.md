@@ -188,8 +188,8 @@ Consistent tool names help people and AI applications identify tools from differ
 
 ### 4.2 Namespace
 
-- Tool names SHOULD follow the pattern of **`Institute.Service.Tool`** with subsections using **`snake_case`** where needed
-- Known exceptions to this pattern are cross-institute or cross-service tools. In this case tools MAY follow the pattern of **`InstituteA_InstituteB.Service.Tool`** or **`Institute.ServiceA_ServiceB.Tool`**
+- Tool names SHOULD follow the pattern of **`Institute_Service_Tool`** with subsections using **`snake_case`** where needed. 
+- Although part of the MCP standard '-' and '.' SHOULD be avoided to maintain compatibility with adjacent protocols that can express MCP tools such as OpenAi and Claude's Model API
 
 ### 4.3 Granularity
 
@@ -496,7 +496,7 @@ Use this checklist to assess a server against the proposed guidelines. **B** = B
 **Tools and schemas**
 
 - [ ] (B) Tool names conform to the spec's canonical format
-- [ ] (R) EBI namespacing + `verb_object` shape *(pending §11.2)*
+- [ ] (R) EBI namespacing + `verb_object` shape
 - [ ] (B) Every tool has input JSON Schema with parameter descriptions
 - [ ] (B) JSON Schema 2020-12 supported; schemas are not automatically fetched from network `$ref` addresses
 - [ ] (R) Schema depth, subschema count and validation time limited
