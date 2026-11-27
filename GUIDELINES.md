@@ -376,7 +376,7 @@ The project also maintains an internal inventory of current and planned EBI MCP 
 
 Some repositories may remain private during development. The inventory SHOULD allow a **"registration-ready, pending public"** status for servers with a validated `meta.yaml` awaiting publication. Build the inventory first, so the working group knows which servers could be combined through an aggregator.
 
-**[OPEN]** Should EBI also provide an aggregator (a "meta-MCP") that presents several servers through one endpoint, or use BioContextAI and the internal inventory alone? See [§11](#11-open-questions-for-the-working-group).
+Servers SHOULD be registered with the EBI aggregator (LiteLLM) once available. 
 
 ---
 
